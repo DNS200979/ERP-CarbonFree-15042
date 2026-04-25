@@ -1,0 +1,10 @@
+# Ignorar variáveis de ambiente
+.env
+
+# Ignorar PDFs gerados localmente pelo aplicativo
+*.pdf
+certificado_*.pdf
+
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
