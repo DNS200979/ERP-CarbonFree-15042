@@ -55,8 +55,8 @@
     --mbv-olive: #b0a94e;
   }
 
-  html, body { height: 100%; }
-  body {
+  html,  { height: 100%; }
+   {
     font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
     background-color: #f5f5f1;
     color: #1f2937;
@@ -200,11 +200,11 @@
     padding: 0.7rem 0.9rem; border-bottom: 2px solid #e5e3d8;
     background: #faf9f3;
   }
-  .data-table tbody td {
+  .data-table t td {
     padding: 0.85rem 0.9rem; border-bottom: 1px solid #ecebe0;
     font-size: 0.88rem;
   }
-  .data-table tbody tr:hover { background: #faf9f3; }
+  .data-table t tr:hover { background: #faf9f3; }
 
   /* Connection pill */
   .conn-pill {
@@ -254,7 +254,20 @@
 </style>
 </head>
 <body class="agro-texture">
+  
+<!-- TELA DE LOGIN -->
+<div id="tela-login" style="padding: 20px; border: 1px solid #ccc; max-width: 300px; margin: 50px auto;">
+    <h3>Login do Sistema</h3>
+    <input type="email" id="email" placeholder="E-mail" style="display: block; width: 100%; margin-bottom: 10px;">
+    <input type="password" id="senha" placeholder="Senha" style="display: block; width: 100%; margin-bottom: 10px;">
+    <button onclick="fazerLogin()" style="width: 100%;">Entrar</button>
+</div>
 
+<!-- O SEU PAINEL ATUAL (Começa escondido) -->
+<div id="painel-principal" style="display: none;">
+    <!-- TODO O SEU HTML DE INVENTÁRIO, ESCOPOS 1, 2 E 3, E O BOTÃO "Enviar ao backend" FICAM AQUI DENTRO -->
+    <h2>Bem-vindo ao ERP CarbonFree</h2>
+</div>
 <!-- ============== LAYOUT ============== -->
 <div class="flex min-h-screen">
 
@@ -1397,6 +1410,78 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => navigateTo('config'), 300);
   }
 });
-</script>
+<script>
+        // 1. Configurar o Supabase no HTML
+        const supabaseUrl = 'https://hykionmuynimrxfleexf.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh5a2lvbm11eW5pbXJ4ZmxlZXhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxMTM3NDgsImV4cCI6MjA5MjY4OTc0OH0.2xFrUd9IpEiQdIN1mb6i85GgmBU130i3L8Wmb81xdRQ';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // 2. Função que executa quando clica em "Entrar"
+        async function fazerLogin() {
+            const email = document.getElementById('input-email').value;
+            const senha = document.getElementById('input-senha').value;
+            const msgErro = document.getElementById('msg-erro');
+
+            msgErro.style.display = 'none';
+
+            // O Supabase vai validar o usuário e senha
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: senha,
+            });
+
+            if (error) {
+                msgErro.innerText = "Erro ao logar: " + error.message;
+                msgErro.style.display = 'block';
+            } else {
+                // SUCESSO! Salva o Token verdadeiro no navegador
+                const tokenReal = data.session.access_token;
+                localStorage.setItem('meu_token_jwt', tokenReal);
+
+                // Esconde a tela de login e mostra o sistema
+                document.getElementById('area-login').style.display = 'none';
+                document.getElementById('area-sistema').style.display = 'block';
+            }
+        }
+
+        // 3. Atualizar a sua função que envia os dados para a API Python
+        async function enviarInventario() {
+            // Pega o token que foi salvo no login
+            const token = localStorage.getItem('meu_token_jwt');
+
+            if (!token) {
+                alert("Você não está autenticado!");
+                return;
+            }
+
+            // Exemplo dos seus dados sendo enviados
+            const dados = {
+                escopo1: 1.2424,
+                escopo2: 0.3500,
+                escopo3: 22.0002
+            };
+
+            try {
+                const resposta = await fetch('http://127.0.0.1:8000/api/COLOQUE_SUA_ROTA_AQUI', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // AQUI ESTÁ A MÁGICA: O Python agora vai receber o token válido!
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(dados)
+                });
+
+                if (resposta.ok) {
+                    alert("Dados enviados com sucesso ao backend!");
+                } else {
+                    const erro = await resposta.text();
+                    alert("O Python recusou: " + erro);
+                }
+            } catch (err) {
+                console.error("Erro na requisição:", err);
+            }
+        }
+    </script>
 </body>
 </html>
