@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.api.auth import usuario_autenticado
-from app.database.client import get_client
+from app.database.client import get_db_client
 
 router = APIRouter()
 
@@ -64,7 +64,7 @@ def emitir_certificado(
     cert.caminho_pdf = salvar_pdf(pdf_bytes, codigo)
 
     try:
-        resp = get_client().table("documentos_compliance").insert({
+        resp = get_db_client().table("documentos_compliance").insert({
             "usuario_id": usuario["id"],
             "pessoa_id": 1,
             "calculo_area": cert.area_hectares,
@@ -81,7 +81,10 @@ def emitir_certificado(
         "codigo": codigo,
         "titular": cert.titular,
         "bioma": cert.bioma,
+        "atividade": cert.atividade,
+        "area_hectares": cert.area_hectares,
         "area_util_ha": round(cert.area_hectares * (1 - cert.percentual_bioma), 4),
+        "valor_cota": cert.valor_cota,
         "valor_cota_reais": cert.valor_cota,
         "caminho_pdf": cert.caminho_pdf,
         "hash_sha256": cert.hash_sha256,
@@ -96,9 +99,10 @@ def listar_certificados(
 ):
     try:
         resp = (
-            get_client()
+            get_db_client()
             .table("documentos_compliance")
-            .select("id,calculo_area,calculo_valor_cota,car_local_documento,hash_auditoria")
+            .select("id,calculo_area,calculo_valor_cota,car_local_documento,hash_auditoria,usuario_id")
+            .or_(f"usuario_id.eq.{usuario['id']},usuario_id.is.null")
             .order("id", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
@@ -115,7 +119,7 @@ def detalhar_certificado(
 ):
     try:
         resp = (
-            get_client()
+            get_db_client()
             .table("documentos_compliance")
             .select("*")
             .eq("id", cert_id)
