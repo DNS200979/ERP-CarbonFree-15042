@@ -250,6 +250,98 @@
     }
     #sidebar-backdrop.open { display: block; }
   }
+
+  /* ─── Modal de Login ─── */
+  #login-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(12, 23, 14, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+    animation: modalFade .35s ease;
+  }
+  #login-modal.hidden { display: none; }
+  @keyframes modalFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .login-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 25px 80px -20px rgba(0,0,0,.5);
+    width: 100%; max-width: 440px;
+    overflow: hidden;
+    animation: cardSlide .4s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes cardSlide {
+    from { opacity: 0; transform: translateY(20px) scale(.96); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+  .login-header {
+    background: linear-gradient(135deg, #152417 0%, #1e3321 100%);
+    padding: 1.6rem 1.8rem 1.4rem;
+    color: #fff; position: relative; overflow: hidden;
+  }
+  .login-header::after {
+    content: ''; position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(140,189,65,.25), transparent 70%);
+    pointer-events: none;
+  }
+  .login-logo {
+    width: 48px; height: 48px;
+    border-radius: 10px; background: var(--mbv-green);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--mbv-dark); font-family: 'Fraunces', serif;
+    font-weight: 700; font-size: 1.5rem;
+    margin-bottom: 0.9rem;
+  }
+  .login-body { padding: 1.6rem 1.8rem 1.8rem; }
+  .login-tab-btn {
+    flex: 1; padding: 0.55rem 0; font-size: 0.85rem; font-weight: 600;
+    color: #6b7280; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all .15s ease;
+  }
+  .login-tab-btn.active {
+    color: var(--mbv-dark); border-bottom-color: var(--mbv-green);
+  }
+  .login-msg {
+    padding: 0.7rem 0.9rem; border-radius: 8px;
+    font-size: 0.83rem; margin-bottom: 0.5rem;
+    display: none; white-space: pre-line; line-height: 1.45;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .login-msg.show { display: block; }
+  .login-msg.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .login-msg.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .login-msg.info    { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+
+  .login-spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Avatar logado */
+  .avatar-pill {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--mbv-green); color: var(--mbv-dark);
+    padding: 0.3rem 0.7rem 0.3rem 0.35rem;
+    border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+    cursor: pointer;
+  }
+  .avatar-pill .avatar-circle {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--mbv-dark); color: var(--mbv-green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 700;
+  }
 </style>
 </head>
 <body class="agro-texture">
@@ -325,9 +417,32 @@
           <div id="conn-pill" class="conn-pill">
             <span class="dot"></span><span id="conn-text">Verificando API…</span>
           </div>
-          <div class="hidden md:flex items-center gap-2 px-3 py-1.5 bg-mbv-cream rounded-full text-xs font-semibold text-mbv-dark">
-            <i data-lucide="user-circle-2" class="w-4 h-4"></i>
-            <span id="user-display">Não autenticado</span>
+
+          <!-- Estado: NÃO logado -->
+          <button id="btn-login" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 bg-mbv-cream hover:bg-stone-200 rounded-full text-xs font-semibold text-mbv-dark transition-colors" onclick="abrirModalLogin()">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span>Entrar</span>
+          </button>
+
+          <!-- Estado: LOGADO (oculto inicialmente) -->
+          <div id="user-menu" class="hidden items-center gap-2 relative">
+            <button class="avatar-pill" onclick="toggleUserDropdown()">
+              <span class="avatar-circle" id="avatar-initial">?</span>
+              <span id="user-email-short">…</span>
+              <i data-lucide="chevron-down" class="w-3 h-3"></i>
+            </button>
+            <div id="user-dropdown" class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-stone-200 py-2 z-30">
+              <div class="px-4 py-2 border-b border-stone-100">
+                <div class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">Conectado como</div>
+                <div class="text-xs text-mbv-dark font-semibold truncate" id="user-email-full">—</div>
+              </div>
+              <button class="w-full text-left px-4 py-2 text-sm hover:bg-stone-50 flex items-center gap-2" onclick="navigateTo('config'); toggleUserDropdown(false)">
+                <i data-lucide="settings" class="w-4 h-4 text-stone-500"></i>Configurações
+              </button>
+              <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2" onclick="logout()">
+                <i data-lucide="log-out" class="w-4 h-4"></i>Sair
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -915,46 +1030,147 @@ curl -X POST <span id="sample-base">http://localhost:8000</span>/api/v1/emissoes
 <!-- Toasts -->
 <div id="toast-area"></div>
 
+<!-- ===================== MODAL DE LOGIN ===================== -->
+<div id="login-modal" class="hidden">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">C</div>
+      <div class="font-display text-2xl leading-tight">CarbonFree 15.042</div>
+      <div class="text-mbv-green text-[11px] uppercase tracking-widest font-bold mt-1">Movimento Brasil Verde · SBCE</div>
+      <p class="text-mbv-lime/80 text-xs mt-2 leading-relaxed">
+        Autentique-se com sua conta Supabase para acessar o painel.
+      </p>
+    </div>
+
+    <div class="login-body">
+      <!-- Tabs entrar/cadastrar -->
+      <div class="flex gap-1 mb-5 border-b border-stone-200">
+        <button class="login-tab-btn active" data-tab="signin" onclick="trocarAbaLogin('signin')">Entrar</button>
+        <button class="login-tab-btn" data-tab="signup" onclick="trocarAbaLogin('signup')">Criar conta</button>
+      </div>
+
+      <!-- Mensagens -->
+      <div id="login-msg" class="login-msg"></div>
+
+      <!-- Form -->
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="field-label">E-mail</label>
+          <input class="field-input" type="email" id="login-email" required autocomplete="email" placeholder="seu@email.com" />
+        </div>
+        <div>
+          <label class="field-label">Senha</label>
+          <input class="field-input" type="password" id="login-senha" required autocomplete="current-password" placeholder="•••••••" minlength="6" />
+        </div>
+
+        <button type="submit" id="login-submit" class="w-full btn-primary justify-center" style="padding:0.8rem;">
+          <span id="login-btn-text">Entrar</span>
+        </button>
+
+        <div class="text-center pt-2">
+          <button type="button" class="text-xs text-stone-500 hover:text-mbv-dark underline" onclick="recuperarSenha()">
+            Esqueci minha senha
+          </button>
+        </div>
+      </form>
+
+      <!-- Configuração manual (oculto por padrão, aparece se backend falhar) -->
+      <div id="supa-manual" class="hidden mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <div class="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1">
+          <i data-lucide="wrench" class="w-3 h-3"></i> Configuração manual do Supabase
+        </div>
+        <p class="text-[11px] text-amber-800 mb-2 leading-relaxed">
+          Cole a URL e a anon key do Supabase (Settings → API).
+        </p>
+        <input id="manual-supa-url" class="field-input mb-2" placeholder="https://xxx.supabase.co" />
+        <textarea id="manual-supa-key" class="field-input font-mono text-[10px] mb-2" rows="2" placeholder="anon key (eyJhbGc...)"></textarea>
+        <button onclick="aplicarConfigManual()" class="btn-primary w-full justify-center text-xs" style="padding:0.5rem;">
+          Aplicar e testar
+        </button>
+      </div>
+
+      <!-- Status de conexão Supabase -->
+      <div class="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+        <span>Servidor Supabase</span>
+        <span id="supa-status" class="font-mono">verificando…</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- =============================================================
      SCRIPTS — front-end lógico
      ============================================================= -->
 <script>
 /* ---------- Estado e config ---------- */
 const STORAGE_KEY = 'cf15042_config';
+
 const state = {
-  apiUrl: '',
-  token: '',
+  apiUrl: '',           // base do backend (ex: http://localhost:8000)
+  token: '',            // JWT Supabase access_token
+  refreshToken: '',     // refresh_token do Supabase
+  user: null,           // { id, email }
+  supabaseUrl: '',      // URL do projeto Supabase
+  supabaseKey: '',      // anon key do Supabase
   emissoes: [],
   certificados: [],
 };
 
+/* ---------- Persistência ---------- */
 function loadConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const c = JSON.parse(raw);
-      state.apiUrl = c.apiUrl || '';
-      state.token  = c.token || '';
+      state.apiUrl       = c.apiUrl       || autoDetectApiUrl();
+      state.token        = c.token        || '';
+      state.refreshToken = c.refreshToken || '';
+      state.user         = c.user         || null;
+    } else {
+      state.apiUrl = autoDetectApiUrl();
     }
-  } catch (e) { /* ignore */ }
+
+    // Config manual do Supabase (override)
+    const manualRaw = localStorage.getItem('cf15042_manual_supa');
+    if (manualRaw) {
+      const m = JSON.parse(manualRaw);
+      if (m.url && m.key) {
+        state.supabaseUrl = m.url;
+        state.supabaseKey = m.key;
+      }
+    }
+  } catch (e) { state.apiUrl = autoDetectApiUrl(); }
+
   document.getElementById('cfg-api-url').value = state.apiUrl;
   document.getElementById('cfg-token').value   = state.token;
   document.getElementById('sample-base').textContent = state.apiUrl || 'http://localhost:8000';
 }
 
+function autoDetectApiUrl() {
+  // Se carregado pelo próprio FastAPI (mesma origem), usa o host atual
+  if (window.location.protocol.startsWith('http')) {
+    return window.location.origin;
+  }
+  return 'http://localhost:8000';
+}
+
 function saveConfig() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    apiUrl: state.apiUrl, token: state.token,
+    apiUrl: state.apiUrl,
+    token: state.token,
+    refreshToken: state.refreshToken,
+    user: state.user,
   }));
 }
 
 function limparConfig() {
   localStorage.removeItem(STORAGE_KEY);
-  state.apiUrl = ''; state.token = '';
+  state.apiUrl = ''; state.token = ''; state.refreshToken = ''; state.user = null;
   document.getElementById('cfg-api-url').value = '';
   document.getElementById('cfg-token').value   = '';
   toast('Configuração removida.', 'warn');
   setConnState(false);
+  atualizarUIUsuario();
 }
 
 /* ---------- Toast ---------- */
@@ -988,6 +1204,322 @@ async function checkHealth() {
   } catch { setConnState(false); return false; }
 }
 
+/* ---------- Carregar config Supabase do backend ---------- */
+async function carregarConfigSupabase() {
+  // Se já temos config manual, mantém
+  if (state.supabaseUrl && state.supabaseKey) return true;
+  if (!state.apiUrl) return false;
+  try {
+    const r = await fetch(`${state.apiUrl}/api/v1/public-config`);
+    if (!r.ok) {
+      console.warn('Endpoint /api/v1/public-config retornou', r.status);
+      return false;
+    }
+    const cfg = await r.json();
+    if (!cfg.supabase_url || !cfg.supabase_anon_key) {
+      console.warn('Backend devolveu supabase config vazia. Verifique .env e app/config.py');
+      return false;
+    }
+    state.supabaseUrl = cfg.supabase_url;
+    state.supabaseKey = cfg.supabase_anon_key;
+    return true;
+  } catch (e) {
+    console.warn('Falha ao carregar public-config:', e.message);
+    return false;
+  }
+}
+
+/* ---------- Supabase Auth (chamadas REST diretas) ---------- */
+// Usa o GoTrue REST API do Supabase. Não requer SDK adicional.
+async function supabaseSignIn(email, senha) {
+  const r = await fetch(`${state.supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': state.supabaseKey,
+    },
+    body: JSON.stringify({ email, password: senha }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || data.error || 'Falha no login');
+  return data;  // { access_token, refresh_token, user, expires_in, ... }
+}
+
+async function supabaseSignUp(email, senha) {
+  const r = await fetch(`${state.supabaseUrl}/auth/v1/signup`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': state.supabaseKey,
+    },
+    body: JSON.stringify({ email, password: senha }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || data.error || 'Falha no cadastro');
+  return data;
+}
+
+async function supabaseRecoverPassword(email) {
+  const r = await fetch(`${state.supabaseUrl}/auth/v1/recover`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': state.supabaseKey,
+    },
+    body: JSON.stringify({ email }),
+  });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.error_description || data.msg || 'Falha ao enviar e-mail');
+  }
+  return true;
+}
+
+async function supabaseLogout() {
+  if (!state.token) return;
+  try {
+    await fetch(`${state.supabaseUrl}/auth/v1/logout`, {
+      method: 'POST',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.token}`,
+      },
+    });
+  } catch (e) { /* ignore */ }
+}
+
+/* ---------- Modal de login ---------- */
+let loginAba = 'signin';
+
+function abrirModalLogin() {
+  document.getElementById('login-modal').classList.remove('hidden');
+  document.getElementById('login-email').focus();
+  showLoginMsg('', '');
+  testarSupabase();
+}
+function fecharModalLogin() {
+  document.getElementById('login-modal').classList.add('hidden');
+}
+
+function trocarAbaLogin(aba) {
+  loginAba = aba;
+  document.querySelectorAll('.login-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === aba);
+  });
+  document.getElementById('login-btn-text').textContent = aba === 'signin' ? 'Entrar' : 'Criar conta';
+  showLoginMsg('', '');
+}
+
+function showLoginMsg(texto, kind) {
+  const el = document.getElementById('login-msg');
+  el.className = 'login-msg' + (texto ? ' show ' + kind : '');
+  el.textContent = texto;
+}
+
+async function testarSupabase() {
+  const status = document.getElementById('supa-status');
+
+  // Se ainda não temos config, tenta carregar de novo
+  if (!state.supabaseUrl) {
+    status.textContent = 'recarregando…';
+    status.className = 'font-mono text-amber-600';
+    const ok = await carregarConfigSupabase();
+    if (!ok) {
+      status.innerHTML = '<button onclick="diagnosticarSupabase()" class="underline text-red-600 hover:text-red-800">não configurado · diagnosticar</button>';
+      return;
+    }
+  }
+
+  try {
+    const r = await fetch(`${state.supabaseUrl}/auth/v1/health`, {
+      headers: { 'apikey': state.supabaseKey },
+    });
+    if (r.ok) {
+      status.textContent = 'conectado ✓';
+      status.className = 'font-mono text-emerald-600';
+    } else {
+      status.textContent = 'erro ' + r.status;
+      status.className = 'font-mono text-red-600';
+    }
+  } catch (e) {
+    status.textContent = 'inacessível';
+    status.className = 'font-mono text-red-600';
+  }
+}
+
+async function diagnosticarSupabase() {
+  const linhas = [];
+  linhas.push(`Backend: ${state.apiUrl}`);
+
+  // Testa /health
+  try {
+    const r = await fetch(`${state.apiUrl}/health`);
+    linhas.push(`/health: ${r.status} ${r.ok ? '✓' : '✗'}`);
+  } catch (e) { linhas.push(`/health: ERRO (${e.message})`); }
+
+  // Testa /api/v1/public-config
+  try {
+    const r = await fetch(`${state.apiUrl}/api/v1/public-config`);
+    linhas.push(`/api/v1/public-config: ${r.status}`);
+    if (r.ok) {
+      const cfg = await r.json();
+      linhas.push(`  supabase_url: ${cfg.supabase_url || '(vazio!)'}`);
+      linhas.push(`  supabase_anon_key: ${cfg.supabase_anon_key ? '(presente, ' + cfg.supabase_anon_key.length + ' chars)' : '(VAZIO!)'}`);
+    } else {
+      linhas.push(`  -> Endpoint não existe ou retornou erro.`);
+      linhas.push(`  -> Verifique se app/api/main.py foi atualizado.`);
+    }
+  } catch (e) { linhas.push(`/api/v1/public-config: ERRO (${e.message})`); }
+
+  showLoginMsg(linhas.join('\n'), 'error');
+
+  // Aciona o modo manual
+  setTimeout(() => mostrarConfigManual(), 100);
+}
+
+function mostrarConfigManual() {
+  const div = document.getElementById('supa-manual');
+  div.classList.remove('hidden');
+  // Recriar ícones lucide para o ícone "wrench" recém-renderizado
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function aplicarConfigManual() {
+  const url = document.getElementById('manual-supa-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('manual-supa-key').value.trim();
+  if (!url || !key) {
+    showLoginMsg('Preencha URL e anon key.', 'error');
+    return;
+  }
+  state.supabaseUrl = url;
+  state.supabaseKey = key;
+  // Persiste para próximas sessões
+  localStorage.setItem('cf15042_manual_supa', JSON.stringify({ url, key }));
+  showLoginMsg('Configuração aplicada. Tente fazer login agora.', 'success');
+  document.getElementById('supa-manual').classList.add('hidden');
+  await testarSupabase();
+}
+
+/* ---------- Submit do form de login ---------- */
+document.getElementById('login-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn   = document.getElementById('login-submit');
+  const btnTxt = document.getElementById('login-btn-text');
+
+  if (!state.supabaseUrl || !state.supabaseKey) {
+    showLoginMsg('Configuração do Supabase não carregada. Verifique se a API está online.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btnTxt.innerHTML = '<span class="login-spinner"></span> ' + (loginAba === 'signin' ? 'Entrando…' : 'Criando…');
+
+  try {
+    if (loginAba === 'signin') {
+      const data = await supabaseSignIn(email, senha);
+      finalizarLogin(data);
+    } else {
+      const data = await supabaseSignUp(email, senha);
+      // Se confirmação de e-mail estiver desativada, vem session pronta
+      if (data.access_token) {
+        finalizarLogin(data);
+      } else if (data.session) {
+        finalizarLogin(data.session);
+      } else {
+        showLoginMsg('Conta criada! Verifique seu e-mail para confirmar antes de entrar.', 'success');
+        trocarAbaLogin('signin');
+      }
+    }
+  } catch (e) {
+    let msg = e.message || 'Falha no login';
+    if (msg.toLowerCase().includes('invalid login')) msg = 'E-mail ou senha incorretos.';
+    if (msg.toLowerCase().includes('already registered')) msg = 'Esse e-mail já está cadastrado. Use a aba "Entrar".';
+    if (msg.toLowerCase().includes('email rate limit')) msg = 'Muitas tentativas. Aguarde alguns minutos.';
+    showLoginMsg(msg, 'error');
+  } finally {
+    btn.disabled = false;
+    btnTxt.textContent = loginAba === 'signin' ? 'Entrar' : 'Criar conta';
+  }
+});
+
+function finalizarLogin(authData) {
+  state.token = authData.access_token;
+  state.refreshToken = authData.refresh_token || '';
+  state.user = authData.user ? {
+    id: authData.user.id,
+    email: authData.user.email,
+  } : null;
+
+  // Popula o campo de configurações automaticamente
+  document.getElementById('cfg-token').value = state.token;
+  saveConfig();
+  atualizarUIUsuario();
+
+  showLoginMsg('Login realizado com sucesso!', 'success');
+  toast(`Bem-vindo(a), ${state.user?.email || 'usuário'}!`, 'success');
+
+  setTimeout(async () => {
+    fecharModalLogin();
+    await refreshDashboard();
+  }, 600);
+}
+
+async function recuperarSenha() {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) {
+    showLoginMsg('Digite seu e-mail antes de pedir recuperação.', 'error');
+    return;
+  }
+  try {
+    await supabaseRecoverPassword(email);
+    showLoginMsg(`Se '${email}' estiver cadastrado, um link foi enviado para sua caixa de entrada.`, 'info');
+  } catch (e) {
+    showLoginMsg(e.message, 'error');
+  }
+}
+
+async function logout() {
+  await supabaseLogout();
+  state.token = ''; state.refreshToken = ''; state.user = null;
+  document.getElementById('cfg-token').value = '';
+  saveConfig();
+  toggleUserDropdown(false);
+  atualizarUIUsuario();
+  toast('Sessão encerrada.', 'warn');
+  setTimeout(() => abrirModalLogin(), 400);
+}
+
+/* ---------- UI do usuário (avatar / botão entrar) ---------- */
+function atualizarUIUsuario() {
+  const btnLogin = document.getElementById('btn-login');
+  const userMenu = document.getElementById('user-menu');
+  if (state.user && state.token) {
+    btnLogin.classList.add('hidden');
+    userMenu.classList.remove('hidden');
+    userMenu.classList.add('inline-flex');
+    const email = state.user.email || '';
+    document.getElementById('user-email-full').textContent = email;
+    document.getElementById('user-email-short').textContent =
+      email.length > 18 ? email.split('@')[0] : email;
+    document.getElementById('avatar-initial').textContent = (email[0] || '?').toUpperCase();
+  } else {
+    btnLogin.classList.remove('hidden');
+    userMenu.classList.add('hidden');
+    userMenu.classList.remove('inline-flex');
+  }
+}
+
+function toggleUserDropdown(force) {
+  const dd = document.getElementById('user-dropdown');
+  const open = force === undefined ? dd.classList.contains('hidden') : force;
+  dd.classList.toggle('hidden', !open);
+}
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#user-menu')) toggleUserDropdown(false);
+});
+
 /* ---------- Fetch helper ---------- */
 async function api(path, opts = {}) {
   if (!state.apiUrl) throw new Error('API não configurada');
@@ -996,6 +1528,14 @@ async function api(path, opts = {}) {
     ...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
   }, opts.headers || {});
   const resp = await fetch(`${state.apiUrl}${path}`, { ...opts, headers });
+  if (resp.status === 401) {
+    // Token expirou ou inválido — força novo login
+    toast('Sessão expirada. Faça login novamente.', 'warn');
+    state.token = ''; state.user = null;
+    saveConfig(); atualizarUIUsuario();
+    abrirModalLogin();
+    throw new Error('Não autenticado');
+  }
   if (!resp.ok) {
     let detail = '';
     try { detail = (await resp.json()).detail || ''; } catch {}
@@ -1070,6 +1610,7 @@ function badgeStatus(status) {
 
 /* ---------- Form Emissão ---------- */
 function abrirFormEmissao() {
+  if (!state.token) { abrirModalLogin(); return; }
   document.getElementById('form-emissao').classList.remove('hidden');
   atualizarPreview();
   document.getElementById('form-emissao').scrollIntoView({ behavior: 'smooth' });
@@ -1133,6 +1674,10 @@ async function carregarEmissoes() {
     tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Configure a URL da API em <strong>Configurações</strong>.</td></tr>';
     return;
   }
+  if (!state.token) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Faça login para ver os inventários.</td></tr>';
+    return;
+  }
   try {
     const data = await api('/api/v1/emissoes/?limit=200');
     state.emissoes = data?.dados || [];
@@ -1157,7 +1702,10 @@ async function carregarEmissoes() {
 }
 
 /* ---------- Form Certificado ---------- */
-function abrirFormCertificado() { document.getElementById('form-certificado').classList.remove('hidden'); }
+function abrirFormCertificado() {
+  if (!state.token) { abrirModalLogin(); return; }
+  document.getElementById('form-certificado').classList.remove('hidden');
+}
 function fecharFormCertificado() { document.getElementById('form-certificado').classList.add('hidden'); }
 
 document.getElementById('cert-form').addEventListener('submit', async (ev) => {
@@ -1182,8 +1730,8 @@ document.getElementById('cert-form').addEventListener('submit', async (ev) => {
 
 async function carregarCertificados() {
   const tbody = document.getElementById('tbl-certificados');
-  if (!state.apiUrl) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Configure a URL da API em <strong>Configurações</strong>.</td></tr>';
+  if (!state.apiUrl || !state.token) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Faça login para ver os certificados.</td></tr>';
     return;
   }
   try {
@@ -1200,8 +1748,8 @@ async function carregarCertificados() {
         <td class="font-semibold text-mbv-dark">${c.titular || '—'}</td>
         <td>${c.bioma || '—'}</td>
         <td class="text-stone-600">${c.atividade || '—'}</td>
-        <td class="text-right font-mono">${fmt(c.area_hectares, 2)}</td>
-        <td class="text-right font-mono text-mbv-dark">R$ ${fmt(c.valor_cota, 2)}</td>
+        <td class="text-right font-mono">${fmt(c.area_hectares ?? c.calculo_area, 2)}</td>
+        <td class="text-right font-mono text-mbv-dark">R$ ${fmt(c.valor_cota ?? c.calculo_valor_cota, 2)}</td>
       </tr>
     `).join('');
   } catch (e) {
@@ -1248,16 +1796,13 @@ async function refreshDashboard() {
   await carregarEmissoes();
   const lista = state.emissoes;
 
-  // Para totalizar escopos precisamos detalhar – usaremos endpoint detalhe se carteira pequena
   let e1 = 0, e2 = 0, e3 = 0;
   let totalEm = 0, cbe = 0, crve = 0;
   let stIsento = 0, stMonit = 0, stObrig = 0;
 
-  // Buscar detalhes em paralelo (até 20 para não sobrecarregar)
   const detalhes = await Promise.all(
     lista.slice(0, 20).map(em => api(`/api/v1/emissoes/${em.id}`).catch(() => null))
   );
-
   const detMap = {};
   detalhes.forEach((d, i) => { if (d) detMap[lista[i].id] = d; });
 
@@ -1269,7 +1814,6 @@ async function refreshDashboard() {
     totalEm += +em.total_tco2e || 0;
     cbe  += +d.cbe_disponiveis || 0;
     crve += +d.crve_disponiveis || 0;
-
     const s = em.status_conformidade || '';
     if (s === 'ISENTO') stIsento++;
     else if (s.startsWith('MONIT')) stMonit++;
@@ -1277,8 +1821,6 @@ async function refreshDashboard() {
   }
 
   const pos = (cbe + crve) - totalEm;
-
-  // KPIs
   document.getElementById('kpi-total-emissoes').textContent = fmt(totalEm, 2);
   document.getElementById('kpi-cbe').textContent  = fmt(cbe, 2);
   document.getElementById('kpi-crve').textContent = fmt(crve, 2);
@@ -1287,10 +1829,10 @@ async function refreshDashboard() {
   kp.className = pos < 0 ? 'text-red-700' : 'text-sbce-ok';
   document.getElementById('kpi-deficit-label').textContent = pos < 0 ? `tCO₂e em DÉFICIT` : `tCO₂e em SUPERÁVIT`;
 
-  // Tabela recentes
   const tbR = document.getElementById('tbl-recent-emissoes');
   if (!lista.length) {
-    tbR.innerHTML = '<tr><td colspan="6" class="empty-state">Sem inventários ainda. Configure a API e cadastre o primeiro.</td></tr>';
+    const msg = state.token ? 'Sem inventários ainda. Cadastre o primeiro.' : 'Faça login para ver os inventários.';
+    tbR.innerHTML = `<tr><td colspan="6" class="empty-state">${msg}</td></tr>`;
   } else {
     tbR.innerHTML = lista.slice(0, 5).map(em => `
       <tr>
@@ -1304,7 +1846,6 @@ async function refreshDashboard() {
     `).join('');
   }
 
-  // Charts
   drawCharts({ e1, e2, e3, stIsento, stMonit, stObrig });
   document.getElementById('leg-isento').textContent = stIsento;
   document.getElementById('leg-monit').textContent  = stMonit;
@@ -1367,9 +1908,8 @@ document.getElementById('config-form').addEventListener('submit', async (ev) => 
   document.getElementById('cfg-health').className = 'font-mono ' + (ok ? 'text-mbv-dark' : 'text-red-700');
   toast(ok ? 'Backend acessível.' : 'Não foi possível alcançar o backend.', ok ? 'success' : 'error');
   if (ok) {
-    await carregarEmissoes();
+    await carregarConfigSupabase();
     await refreshDashboard();
-    if (state.token) document.getElementById('user-display').textContent = 'Sessão Bearer ativa';
   }
 });
 
@@ -1377,23 +1917,40 @@ document.getElementById('config-form').addEventListener('submit', async (ev) => 
 document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   loadConfig();
-  if (state.apiUrl) {
-    document.getElementById('cfg-endpoint').textContent = state.apiUrl + '/health';
-    document.getElementById('sample-base').textContent = state.apiUrl;
-    const ok = await checkHealth();
-    if (ok) {
-      document.getElementById('cfg-health').textContent = 'OK · 200';
-      document.getElementById('cfg-health').className = 'font-mono text-mbv-dark';
-      if (state.token) document.getElementById('user-display').textContent = 'Sessão Bearer ativa';
-      await refreshDashboard();
-    } else {
-      document.getElementById('cfg-health').textContent = 'FALHOU';
-      drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
-    }
-  } else {
-    setConnState(false, 'Configure a API');
+
+  // 1) Verificar saúde do backend
+  document.getElementById('cfg-endpoint').textContent = state.apiUrl + '/health';
+  document.getElementById('sample-base').textContent = state.apiUrl;
+  const apiOk = await checkHealth();
+
+  if (!apiOk) {
+    document.getElementById('cfg-health').textContent = 'FALHOU';
     drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
-    setTimeout(() => navigateTo('config'), 300);
+    toast('Backend offline em ' + state.apiUrl + ' — inicie com: python start_api.py', 'error');
+    // Mesmo sem backend, abre modal (permitirá config manual)
+    setTimeout(() => abrirModalLogin(), 300);
+    return;
+  }
+
+  document.getElementById('cfg-health').textContent = 'OK · 200';
+  document.getElementById('cfg-health').className = 'font-mono text-mbv-dark';
+
+  // 2) Carregar config Supabase do backend ANTES de qualquer outra coisa
+  const supaOk = await carregarConfigSupabase();
+  if (!supaOk) {
+    console.warn('Config Supabase não disponível.');
+    toast('Backend não devolveu config Supabase. Verifique .env e o endpoint /api/v1/public-config.', 'warn');
+  }
+
+  // 3) Já tem token salvo? Tenta usar.
+  if (state.token && state.user) {
+    atualizarUIUsuario();
+    drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
+    await refreshDashboard();
+  } else {
+    // Não tem sessão → abre modal de login (config Supabase já está pronta)
+    drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
+    setTimeout(() => abrirModalLogin(), 200);
   }
 });
 </script>
