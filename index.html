@@ -309,7 +309,8 @@
   .login-msg {
     padding: 0.7rem 0.9rem; border-radius: 8px;
     font-size: 0.83rem; margin-bottom: 0.5rem;
-    display: none;
+    display: none; white-space: pre-line; line-height: 1.45;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
   .login-msg.show { display: block; }
   .login-msg.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
@@ -1073,6 +1074,21 @@ curl -X POST <span id="sample-base">http://localhost:8000</span>/api/v1/emissoes
         </div>
       </form>
 
+      <!-- Configuração manual (oculto por padrão, aparece se backend falhar) -->
+      <div id="supa-manual" class="hidden mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <div class="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1">
+          <i data-lucide="wrench" class="w-3 h-3"></i> Configuração manual do Supabase
+        </div>
+        <p class="text-[11px] text-amber-800 mb-2 leading-relaxed">
+          Cole a URL e a anon key do Supabase (Settings → API).
+        </p>
+        <input id="manual-supa-url" class="field-input mb-2" placeholder="https://xxx.supabase.co" />
+        <textarea id="manual-supa-key" class="field-input font-mono text-[10px] mb-2" rows="2" placeholder="anon key (eyJhbGc...)"></textarea>
+        <button onclick="aplicarConfigManual()" class="btn-primary w-full justify-center text-xs" style="padding:0.5rem;">
+          Aplicar e testar
+        </button>
+      </div>
+
       <!-- Status de conexão Supabase -->
       <div class="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
         <span>Servidor Supabase</span>
@@ -1112,6 +1128,16 @@ function loadConfig() {
       state.user         = c.user         || null;
     } else {
       state.apiUrl = autoDetectApiUrl();
+    }
+
+    // Config manual do Supabase (override)
+    const manualRaw = localStorage.getItem('cf15042_manual_supa');
+    if (manualRaw) {
+      const m = JSON.parse(manualRaw);
+      if (m.url && m.key) {
+        state.supabaseUrl = m.url;
+        state.supabaseKey = m.key;
+      }
     }
   } catch (e) { state.apiUrl = autoDetectApiUrl(); }
 
@@ -1180,15 +1206,27 @@ async function checkHealth() {
 
 /* ---------- Carregar config Supabase do backend ---------- */
 async function carregarConfigSupabase() {
+  // Se já temos config manual, mantém
+  if (state.supabaseUrl && state.supabaseKey) return true;
   if (!state.apiUrl) return false;
   try {
     const r = await fetch(`${state.apiUrl}/api/v1/public-config`);
-    if (!r.ok) return false;
+    if (!r.ok) {
+      console.warn('Endpoint /api/v1/public-config retornou', r.status);
+      return false;
+    }
     const cfg = await r.json();
-    state.supabaseUrl = cfg.supabase_url || '';
-    state.supabaseKey = cfg.supabase_anon_key || '';
-    return !!(state.supabaseUrl && state.supabaseKey);
-  } catch { return false; }
+    if (!cfg.supabase_url || !cfg.supabase_anon_key) {
+      console.warn('Backend devolveu supabase config vazia. Verifique .env e app/config.py');
+      return false;
+    }
+    state.supabaseUrl = cfg.supabase_url;
+    state.supabaseKey = cfg.supabase_anon_key;
+    return true;
+  } catch (e) {
+    console.warn('Falha ao carregar public-config:', e.message);
+    return false;
+  }
 }
 
 /* ---------- Supabase Auth (chamadas REST diretas) ---------- */
@@ -1280,26 +1318,86 @@ function showLoginMsg(texto, kind) {
 
 async function testarSupabase() {
   const status = document.getElementById('supa-status');
+
+  // Se ainda não temos config, tenta carregar de novo
   if (!state.supabaseUrl) {
-    status.textContent = 'não configurado';
-    status.className = 'font-mono text-red-600';
-    return;
+    status.textContent = 'recarregando…';
+    status.className = 'font-mono text-amber-600';
+    const ok = await carregarConfigSupabase();
+    if (!ok) {
+      status.innerHTML = '<button onclick="diagnosticarSupabase()" class="underline text-red-600 hover:text-red-800">não configurado · diagnosticar</button>';
+      return;
+    }
   }
+
   try {
     const r = await fetch(`${state.supabaseUrl}/auth/v1/health`, {
       headers: { 'apikey': state.supabaseKey },
     });
     if (r.ok) {
-      status.textContent = 'conectado';
+      status.textContent = 'conectado ✓';
       status.className = 'font-mono text-emerald-600';
     } else {
       status.textContent = 'erro ' + r.status;
       status.className = 'font-mono text-red-600';
     }
-  } catch {
+  } catch (e) {
     status.textContent = 'inacessível';
     status.className = 'font-mono text-red-600';
   }
+}
+
+async function diagnosticarSupabase() {
+  const linhas = [];
+  linhas.push(`Backend: ${state.apiUrl}`);
+
+  // Testa /health
+  try {
+    const r = await fetch(`${state.apiUrl}/health`);
+    linhas.push(`/health: ${r.status} ${r.ok ? '✓' : '✗'}`);
+  } catch (e) { linhas.push(`/health: ERRO (${e.message})`); }
+
+  // Testa /api/v1/public-config
+  try {
+    const r = await fetch(`${state.apiUrl}/api/v1/public-config`);
+    linhas.push(`/api/v1/public-config: ${r.status}`);
+    if (r.ok) {
+      const cfg = await r.json();
+      linhas.push(`  supabase_url: ${cfg.supabase_url || '(vazio!)'}`);
+      linhas.push(`  supabase_anon_key: ${cfg.supabase_anon_key ? '(presente, ' + cfg.supabase_anon_key.length + ' chars)' : '(VAZIO!)'}`);
+    } else {
+      linhas.push(`  -> Endpoint não existe ou retornou erro.`);
+      linhas.push(`  -> Verifique se app/api/main.py foi atualizado.`);
+    }
+  } catch (e) { linhas.push(`/api/v1/public-config: ERRO (${e.message})`); }
+
+  showLoginMsg(linhas.join('\n'), 'error');
+
+  // Aciona o modo manual
+  setTimeout(() => mostrarConfigManual(), 100);
+}
+
+function mostrarConfigManual() {
+  const div = document.getElementById('supa-manual');
+  div.classList.remove('hidden');
+  // Recriar ícones lucide para o ícone "wrench" recém-renderizado
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function aplicarConfigManual() {
+  const url = document.getElementById('manual-supa-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('manual-supa-key').value.trim();
+  if (!url || !key) {
+    showLoginMsg('Preencha URL e anon key.', 'error');
+    return;
+  }
+  state.supabaseUrl = url;
+  state.supabaseKey = key;
+  // Persiste para próximas sessões
+  localStorage.setItem('cf15042_manual_supa', JSON.stringify({ url, key }));
+  showLoginMsg('Configuração aplicada. Tente fazer login agora.', 'success');
+  document.getElementById('supa-manual').classList.add('hidden');
+  await testarSupabase();
 }
 
 /* ---------- Submit do form de login ---------- */
@@ -1828,17 +1926,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!apiOk) {
     document.getElementById('cfg-health').textContent = 'FALHOU';
     drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
-    toast('Backend offline. Inicie a API com: python start_api.py', 'error');
+    toast('Backend offline em ' + state.apiUrl + ' — inicie com: python start_api.py', 'error');
+    // Mesmo sem backend, abre modal (permitirá config manual)
+    setTimeout(() => abrirModalLogin(), 300);
     return;
   }
 
   document.getElementById('cfg-health').textContent = 'OK · 200';
   document.getElementById('cfg-health').className = 'font-mono text-mbv-dark';
 
-  // 2) Carregar config Supabase do backend
+  // 2) Carregar config Supabase do backend ANTES de qualquer outra coisa
   const supaOk = await carregarConfigSupabase();
   if (!supaOk) {
-    toast('Não consegui carregar a configuração do Supabase.', 'error');
+    console.warn('Config Supabase não disponível.');
+    toast('Backend não devolveu config Supabase. Verifique .env e o endpoint /api/v1/public-config.', 'warn');
   }
 
   // 3) Já tem token salvo? Tenta usar.
@@ -1847,7 +1948,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
     await refreshDashboard();
   } else {
-    // Não tem sessão → abre modal de login
+    // Não tem sessão → abre modal de login (config Supabase já está pronta)
     drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
     setTimeout(() => abrirModalLogin(), 200);
   }
