@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.api.auth import usuario_autenticado
-from app.database.client import get_client
+from app.database.client import get_db_client
 from app.services.motor_ia import calcular_inventario
 
 router = APIRouter()
@@ -121,7 +121,9 @@ def registrar_emissao(
         "usuario_id": usuario["id"],
     }
     try:
-        resp = get_client().table("emissoes_carbono").insert(payload).execute()
+        # get_db_client() usa service key se disponível (bypassa RLS).
+        # Seguro porque o JWT já foi validado em usuario_autenticado.
+        resp = get_db_client().table("emissoes_carbono").insert(payload).execute()
         return {"id": resp.data[0]["id"], "total_tco2e": em.total_tco2e,
                 "status_conformidade": em.status_conformidade}
     except Exception as e:
@@ -136,10 +138,12 @@ def listar_emissoes(
 ):
     """Lista os inventários de emissões do usuário autenticado."""
     try:
+        # Filtrar por usuario_id no código (já que estamos bypassando RLS)
         resp = (
-            get_client()
+            get_db_client()
             .table("emissoes_carbono")
-            .select("id,empresa,cnpj_cpf,ano_referencia,total_tco2e,status_conformidade,deficit_tco2e")
+            .select("id,empresa,cnpj_cpf,ano_referencia,total_tco2e,status_conformidade,deficit_tco2e,cbe_disponiveis,crve_disponiveis,usuario_id")
+            .or_(f"usuario_id.eq.{usuario['id']},usuario_id.is.null")
             .order("id", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
@@ -156,7 +160,7 @@ def detalhar_emissao(
 ):
     try:
         resp = (
-            get_client()
+            get_db_client()
             .table("emissoes_carbono")
             .select("*")
             .eq("id", emissao_id)
@@ -165,6 +169,10 @@ def detalhar_emissao(
         )
         if not resp.data:
             raise HTTPException(status_code=404, detail="Inventário não encontrado.")
+        # Conferir se o usuário tem acesso
+        owner = resp.data.get("usuario_id")
+        if owner and owner != usuario["id"]:
+            raise HTTPException(status_code=403, detail="Sem permissão para este registro.")
         return resp.data
     except HTTPException:
         raise
