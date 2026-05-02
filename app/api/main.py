@@ -25,6 +25,7 @@ if not _FASTAPI_OK:
 from app.api.routes import emissoes, certificados, integracao
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from app.config import SUPABASE_URL, SUPABASE_KEY
 
 
 app = FastAPI(
@@ -49,18 +50,31 @@ app.add_middleware(
 app.include_router(emissoes.router,      prefix="/api/v1/emissoes",      tags=["Emissões de Carbono"])
 app.include_router(certificados.router,  prefix="/api/v1/certificados",  tags=["Certificados Ambientais"])
 app.include_router(integracao.router,    prefix="/api/v1/integracao",     tags=["Integração SAP / TOTVS"])
+
+# Servir o dashboard como arquivo estático na raiz
 app.mount("/static", StaticFiles(directory="."), name="static")
-
-
-@app.get("/", tags=["Health"])
-def raiz():
-    return {"status": "ok", "sistema": "MBV ERP API", "versao": "1.0.0"}
 
 
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "healthy"}
-    
+
+
+@app.get("/api/v1/public-config", tags=["Health"])
+def public_config():
+    """
+    Devolve a URL e a anon key do Supabase para o frontend.
+    A anon key é segura para uso público (RLS protege os dados).
+    NUNCA inclua aqui o SUPABASE_SERVICE_KEY.
+    """
+    return {
+        "supabase_url": SUPABASE_URL,
+        "supabase_anon_key": SUPABASE_KEY,
+        "api_base": "",  # mesmo host
+    }
+
+
 @app.get("/", include_in_schema=False)
 def index():
+    """Serve o dashboard HTML."""
     return FileResponse("index.html")
