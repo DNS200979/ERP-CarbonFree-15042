@@ -342,6 +342,79 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 0.72rem; font-weight: 700;
   }
+
+  /* ─── Calculadoras ─── */
+  .calc-btn {
+    background: transparent; border: none; cursor: pointer;
+    font-size: 14px; padding: 0; color: var(--mbv-green);
+    opacity: 0.7; transition: all .15s ease;
+  }
+  .calc-btn:hover { opacity: 1; transform: scale(1.15); }
+
+  .calc-card {
+    background: #fff; border: 1px solid #e5e3d8; border-radius: 14px;
+    padding: 1.2rem; transition: all .2s ease;
+    display: flex; flex-direction: column; gap: 0.8rem;
+  }
+  .calc-card:hover { border-color: var(--mbv-green); box-shadow: 0 8px 24px -12px rgba(140,189,65,.25); }
+  .calc-card-header {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding-bottom: 0.7rem; border-bottom: 1px solid #ecebe0;
+  }
+  .calc-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .calc-icon.e1 { background: rgba(21,36,23,.1); color: var(--mbv-dark); }
+  .calc-icon.e2 { background: rgba(140,189,65,.18); color: #5a8527; }
+  .calc-icon.e3 { background: rgba(176,169,78,.2); color: #7a751b; }
+
+  .calc-result {
+    background: var(--mbv-dark); color: #fff;
+    padding: 0.7rem 0.9rem; border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .calc-result .label { font-size: 10px; color: var(--mbv-olive); text-transform: uppercase; letter-spacing: 0.08em; }
+  .calc-result .value { font-size: 1.3rem; font-weight: 700; color: var(--mbv-green); }
+
+  .escopo-tag {
+    display: inline-block; padding: 0.15rem 0.5rem;
+    border-radius: 999px; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .escopo-tag.e1 { background: #1f2937; color: #d1d5db; }
+  .escopo-tag.e2 { background: #dcfce7; color: #166534; }
+  .escopo-tag.e3 { background: #fef3c7; color: #854d0e; }
+
+  /* Modal contextual (calc dentro de calc) */
+  #calc-modal {
+    position: fixed; inset: 0; z-index: 110;
+    background: rgba(12,23,14,.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; animation: modalFade .2s ease;
+  }
+  #calc-modal.hidden { display: none; }
+  .calc-modal-card {
+    background: #fff; border-radius: 14px; max-width: 480px; width: 100%;
+    box-shadow: 0 20px 60px -10px rgba(0,0,0,.4);
+    animation: cardSlide .25s ease;
+  }
+  .calc-modal-header {
+    background: var(--mbv-dark); color: #fff;
+    padding: 1rem 1.3rem; border-radius: 14px 14px 0 0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .calc-modal-body { padding: 1.3rem; }
+
+  /* Tabs do hub */
+  .calc-tab {
+    padding: 0.55rem 1rem; font-size: 0.85rem; font-weight: 600;
+    color: #6b7280; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all .15s ease;
+  }
+  .calc-tab.active { color: var(--mbv-dark); border-bottom-color: var(--mbv-green); }
 </style>
 </head>
 <body class="agro-texture">
@@ -370,6 +443,7 @@
       <div class="px-3 pb-2 pt-1 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Operação</div>
       <a class="sidebar-link active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
       <a class="sidebar-link" data-view="emissoes"><i data-lucide="factory"></i> Inventário GEE</a>
+      <a class="sidebar-link" data-view="calculadoras"><i data-lucide="calculator"></i> Calculadoras IA</a>
       <a class="sidebar-link" data-view="ativos"><i data-lucide="coins"></i> Ativos CBE / CRVE</a>
 
       <div class="px-3 pb-2 pt-4 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Agronegócio</div>
@@ -605,10 +679,28 @@
                 <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
               </legend>
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><label class="field-label">Comb. Estacionário</label><input class="field-input emissao-num" type="number" step="0.0001" name="e1_estacionario" value="0" /></div>
-                <div><label class="field-label">Frota Própria</label><input class="field-input emissao-num" type="number" step="0.0001" name="e1_movel" value="0" /></div>
-                <div><label class="field-label">Processos Industriais</label><input class="field-input emissao-num" type="number" step="0.0001" name="e1_processos" value="0" /></div>
-                <div><label class="field-label">Emissões Fugitivas</label><input class="field-input emissao-num" type="number" step="0.0001" name="e1_fugitivas" value="0" /></div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Comb. Estacionário
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('combustivel-estacionario','e1_estacionario')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_estacionario" value="0" />
+                </div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Frota Própria
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('combustivel-movel','e1_movel')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_movel" value="0" />
+                </div>
+                <div>
+                  <label class="field-label">Processos Industriais</label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_processos" value="0" />
+                </div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Emissões Fugitivas
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('refrigerante','e1_fugitivas')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_fugitivas" value="0" />
+                </div>
               </div>
             </fieldset>
 
@@ -618,8 +710,16 @@
                 Escopo 2 · Energia Indireta <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
               </legend>
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><label class="field-label">Energia Elétrica</label><input class="field-input emissao-num" type="number" step="0.0001" name="e2_eletrica" value="0" /></div>
-                <div><label class="field-label">Vapor / Calor</label><input class="field-input emissao-num" type="number" step="0.0001" name="e2_vapor" value="0" /></div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Energia Elétrica
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('eletricidade','e2_eletrica')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e2_eletrica" value="0" />
+                </div>
+                <div>
+                  <label class="field-label">Vapor / Calor</label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e2_vapor" value="0" />
+                </div>
               </div>
             </fieldset>
 
@@ -629,9 +729,22 @@
                 Escopo 3 · Outras Indiretas <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
               </legend>
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div><label class="field-label">Cadeia Fornec.</label><input class="field-input emissao-num" type="number" step="0.0001" name="e3_cadeia" value="0" /></div>
-                <div><label class="field-label">Transporte/Distrib.</label><input class="field-input emissao-num" type="number" step="0.0001" name="e3_transporte" value="0" /></div>
-                <div><label class="field-label">Resíduos</label><input class="field-input emissao-num" type="number" step="0.0001" name="e3_residuos" value="0" /></div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Cadeia Fornec.
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('cadeia','e3_cadeia')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e3_cadeia" value="0" />
+                </div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Transporte/Distrib.
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('transporte','e3_transporte')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e3_transporte" value="0" />
+                </div>
+                <div>
+                  <label class="field-label">Resíduos</label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e3_residuos" value="0" />
+                </div>
               </div>
             </fieldset>
 
@@ -680,6 +793,237 @@
                 <tr><td colspan="7" class="empty-state">Sem dados ainda. Configure a API e cadastre seu primeiro inventário.</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: CALCULADORAS IA ===================== -->
+      <section id="view-calculadoras" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Calculadoras IA</h1>
+          <p class="section-subtitle">Converta consumos físicos (litros, kWh, km) em tCO₂e usando fatores IPCC AR6 + MCTI 2024.</p>
+        </div>
+
+        <!-- Tabs Hub / Histórico -->
+        <div class="flex gap-1 mb-5 border-b border-stone-200">
+          <button class="calc-tab active" data-calc-tab="hub" onclick="trocarAbaCalc('hub')">
+            <i data-lucide="grid-3x3" class="w-3.5 h-3.5 inline"></i> Hub de cálculo
+          </button>
+          <button class="calc-tab" data-calc-tab="historico" onclick="trocarAbaCalc('historico')">
+            <i data-lucide="history" class="w-3.5 h-3.5 inline"></i> Histórico
+          </button>
+        </div>
+
+        <!-- ABA: HUB ============================================================ -->
+        <div id="calc-aba-hub">
+
+          <!-- Caixa explicativa -->
+          <div class="bg-mbv-dark text-white rounded-xl p-4 mb-5 flex items-start gap-3">
+            <i data-lucide="info" class="w-5 h-5 text-mbv-green shrink-0 mt-0.5"></i>
+            <div class="text-sm text-mbv-lime leading-relaxed">
+              Cada calculadora pode ser usada de forma independente, ou clicada via botão 🧮 ao lado de cada
+              campo do <strong>Inventário GEE</strong> para preenchimento automático. Marque
+              <strong>"Salvar"</strong> para registrar o cálculo no histórico do usuário.
+            </div>
+          </div>
+
+          <!-- Grid de calculadoras -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+            <!-- COMBUSTÍVEL -->
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e1">⛽</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Combustível</div>
+                  <span class="escopo-tag e1">Escopo 1</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Tipo</label>
+                  <select id="calc-comb-tipo" class="field-input"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="field-label">Quantidade</label>
+                    <input id="calc-comb-qtd" class="field-input" type="number" step="0.01" placeholder="0" />
+                  </div>
+                  <div>
+                    <label class="field-label">Categoria</label>
+                    <select id="calc-comb-cat" class="field-input">
+                      <option value="combustivel_estacionario">Estacionário</option>
+                      <option value="combustivel_movel">Móvel/Frota</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="calc-comb-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive" id="calc-comb-unit">tCO₂e</div></div>
+                <div class="value" id="calc-comb-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-comb-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('combustivel')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <!-- ELETRICIDADE -->
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e2">⚡</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Energia Elétrica</div>
+                  <span class="escopo-tag e2">Escopo 2</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Consumo (kWh)</label>
+                  <input id="calc-ele-kwh" class="field-input" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div id="calc-ele-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · fator SIN</div></div>
+                <div class="value" id="calc-ele-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-ele-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('eletricidade')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <!-- REFRIGERANTE -->
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e1">❄️</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Refrigerante (fugitivo)</div>
+                  <span class="escopo-tag e1">Escopo 1</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Tipo de gás</label>
+                  <select id="calc-ref-tipo" class="field-input"></select>
+                </div>
+                <div>
+                  <label class="field-label">Kg vazados</label>
+                  <input id="calc-ref-kg" class="field-input" type="number" step="0.001" placeholder="0" />
+                </div>
+                <div id="calc-ref-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · GWP AR6</div></div>
+                <div class="value" id="calc-ref-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-ref-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('refrigerante')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <!-- CADEIA -->
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e3">🛒</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Cadeia de Fornecimento</div>
+                  <span class="escopo-tag e3">Escopo 3</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Setor</label>
+                  <select id="calc-cad-setor" class="field-input"></select>
+                </div>
+                <div>
+                  <label class="field-label">Valor compras (R$)</label>
+                  <input id="calc-cad-valor" class="field-input" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div id="calc-cad-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · EEIO</div></div>
+                <div class="value" id="calc-cad-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-cad-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('cadeia')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <!-- TRANSPORTE -->
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e3">🚛</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Transporte Rodoviário</div>
+                  <span class="escopo-tag e3">Escopo 3</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="field-label">Distância (km)</label>
+                    <input id="calc-trp-km" class="field-input" type="number" step="0.1" placeholder="0" />
+                  </div>
+                  <div>
+                    <label class="field-label">Carga (ton)</label>
+                    <input id="calc-trp-ton" class="field-input" type="number" step="0.1" value="1" />
+                  </div>
+                </div>
+                <div>
+                  <label class="field-label">Veículo</label>
+                  <select id="calc-trp-veic" class="field-input"></select>
+                </div>
+                <div id="calc-trp-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · tkm</div></div>
+                <div class="value" id="calc-trp-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-trp-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('transporte')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ABA: HISTÓRICO ===================================================== -->
+        <div id="calc-aba-historico" class="hidden">
+          <div class="bg-white rounded-xl border border-stone-200">
+            <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
+              <h3 class="font-display text-lg text-mbv-dark">Histórico de cálculos</h3>
+              <button class="btn-secondary text-xs" onclick="carregarHistorico()">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Atualizar
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Data</th><th>Tipo</th><th>Escopo</th><th>Entrada</th>
+                  <th class="text-right">tCO₂e</th><th>Aplicado em</th><th></th>
+                </tr></thead>
+                <tbody id="tbl-historico">
+                  <tr><td colspan="7" class="empty-state">Carregando histórico…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -1029,6 +1373,42 @@ curl -X POST <span id="sample-base">http://localhost:8000</span>/api/v1/emissoes
 
 <!-- Toasts -->
 <div id="toast-area"></div>
+
+<!-- ===================== MINI-MODAL CALC CONTEXTUAL ===================== -->
+<div id="calc-modal" class="hidden">
+  <div class="calc-modal-card">
+    <div class="calc-modal-header">
+      <div>
+        <div class="text-mbv-green text-[10px] uppercase tracking-widest font-bold">Motor IA</div>
+        <div id="calc-modal-title" class="font-display text-lg">Calculadora</div>
+      </div>
+      <button onclick="fecharCalcContextual()" class="text-mbv-lime hover:text-white">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="calc-modal-body">
+      <div class="text-xs text-stone-500 mb-3">
+        Resultado será injetado no campo: <code id="calc-modal-target" class="font-mono bg-stone-100 px-1 rounded text-mbv-dark"></code>
+      </div>
+      <div id="calc-modal-form" class="space-y-3"></div>
+      <div id="calc-modal-result" class="calc-result mt-4 hidden">
+        <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e</div></div>
+        <div class="value" id="calc-modal-value">—</div>
+      </div>
+      <label class="flex items-center gap-2 text-xs text-stone-600 mt-3">
+        <input type="checkbox" id="calc-modal-save" class="accent-mbv-green" /> Salvar este cálculo no histórico
+      </label>
+      <div class="flex gap-2 mt-4">
+        <button onclick="calcularContextual()" class="btn-primary flex-1 justify-center text-sm">
+          <i data-lucide="play" class="w-4 h-4"></i> Calcular
+        </button>
+        <button onclick="aplicarContextual()" id="btn-aplicar-contextual" class="btn-accent flex-1 justify-center text-sm hidden">
+          <i data-lucide="check" class="w-4 h-4"></i> Aplicar no campo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ===================== MODAL DE LOGIN ===================== -->
 <div id="login-modal" class="hidden">
@@ -1549,6 +1929,7 @@ async function api(path, opts = {}) {
 const VIEW_TITLES = {
   dashboard: 'Visão Geral',
   emissoes: 'Inventário GEE',
+  calculadoras: 'Calculadoras IA',
   ativos: 'Ativos CBE / CRVE',
   agro: 'Certificados Rurais',
   propriedades: 'Propriedades',
@@ -1568,6 +1949,7 @@ function navigateTo(view) {
   if (view === 'ativos') carregarAtivos();
   if (view === 'agro') carregarCertificados();
   if (view === 'dashboard') refreshDashboard();
+  if (view === 'calculadoras') iniciarCalculadoras();
 }
 
 document.querySelectorAll('.sidebar-link').forEach(a => {
@@ -1912,6 +2294,418 @@ document.getElementById('config-form').addEventListener('submit', async (ev) => 
     await refreshDashboard();
   }
 });
+
+/* ========================================================================
+ *  CALCULADORAS IA — Hub + acoplamento contextual + histórico
+ * ====================================================================== */
+
+const CALC_STATE = {
+  catalogo: null,        // { combustiveis, refrigerantes, setores_cadeia, ... }
+  contextual: null,      // { tipo, campoDestino, ultimoResultado }
+};
+
+// Mapeamento: tipo de cálculo → fator local (preview JS instantâneo)
+const FATORES_LOCAIS = {
+  // Mesmos números do app/services/motor_ia.py — mantidos sincronizados
+  combustiveis: {
+    'gasolina':         { co2: 2.212, ch4: 0.0004, n2o: 0.00014, uni: 'litro' },
+    'etanol':           { co2: 0.0,   ch4: 0.0003, n2o: 0.00011, uni: 'litro' },
+    'diesel':           { co2: 2.603, ch4: 0.0002, n2o: 0.00009, uni: 'litro' },
+    'gnv':              { co2: 1.937, ch4: 0.0066, n2o: 0.00003, uni: 'm³' },
+    'gas_natural':      { co2: 1.937, ch4: 0.0029, n2o: 0.00003, uni: 'm³' },
+    'glp':              { co2: 1.614, ch4: 0.0002, n2o: 0.00001, uni: 'kg' },
+    'oleo_combustivel': { co2: 3.123, ch4: 0.0003, n2o: 0.00012, uni: 'litro' },
+    'carvao_mineral':   { co2: 2.422, ch4: 0.0010, n2o: 0.00042, uni: 'kg' },
+    'biomassa':         { co2: 0.0,   ch4: 0.0300, n2o: 0.00400, uni: 'kg' },
+    'querosene':        { co2: 2.543, ch4: 0.0005, n2o: 0.00010, uni: 'litro' },
+  },
+  GWP_CH4: 27.9,
+  GWP_N2O: 273.0,
+  fatorEletricidade: 0.0907 / 1000, // tCO2e por kWh
+  refrigerantes: {
+    'r-22': 1810, 'r-134a': 1430, 'r-404a': 3922, 'r-410a': 2088,
+    'r-407c': 1774, 'r-32': 675, 'hfo-1234yf': 4,
+  },
+  cadeia: {
+    'agropecuaria': 0.320, 'industria_alimenticia': 0.180, 'industria_metalurgica': 0.420,
+    'industria_quimica': 0.350, 'industria_cimento': 0.850, 'comercio_varejo': 0.085,
+    'servicos_ti': 0.040, 'servicos_financeiros': 0.030, 'construcao_civil': 0.380,
+    'transporte_logistica': 0.290,
+  },
+  veiculosTkm: {
+    'caminhao_diesel': 0.000096, 'caminhao_leve': 0.000142, 'van_diesel': 0.000180,
+    'trem': 0.000028, 'navio': 0.000016, 'aviao_carga': 0.000800,
+  },
+};
+
+// === Preview local (JS) — instantâneo ====================================
+function previewLocal(tipo, dados) {
+  const F = FATORES_LOCAIS;
+  if (tipo === 'combustivel') {
+    const k = (dados.combustivel || '').toLowerCase().replace(/[ -]/g, '_');
+    const f = F.combustiveis[k];
+    if (!f) return null;
+    const q = +dados.quantidade || 0;
+    return q * (f.co2 + f.ch4 * F.GWP_CH4 + f.n2o * F.GWP_N2O);
+  }
+  if (tipo === 'eletricidade') return (+dados.kwh || 0) * F.fatorEletricidade;
+  if (tipo === 'refrigerante') {
+    const gwp = F.refrigerantes[(dados.refrigerante || '').toLowerCase()] || 1500;
+    return (+dados.kg_vazados || 0) * gwp / 1000;
+  }
+  if (tipo === 'cadeia') {
+    const f = F.cadeia[dados.setor] || 0.150;
+    return (+dados.valor_reais || 0) / 1000 * f;
+  }
+  if (tipo === 'transporte') {
+    const f = F.veiculosTkm[dados.veiculo] || 0.000096;
+    return (+dados.km || 0) * (+dados.toneladas || 1) * f;
+  }
+  return null;
+}
+
+// === Carregar catálogo do backend ========================================
+async function carregarCatalogo() {
+  if (CALC_STATE.catalogo) return CALC_STATE.catalogo;
+  try {
+    const data = await api('/api/v1/calculadoras/catalogo');
+    CALC_STATE.catalogo = data;
+    return data;
+  } catch (e) {
+    toast('Erro ao carregar catálogo de calculadoras: ' + e.message, 'error');
+    return null;
+  }
+}
+
+// === Inicializar a view de calculadoras ==================================
+async function iniciarCalculadoras() {
+  if (!state.token) { abrirModalLogin(); return; }
+  const cat = await carregarCatalogo();
+  if (!cat) return;
+
+  // Popular selects
+  popularSelect('calc-comb-tipo', cat.combustiveis, c => c.id, c => `${c.label} (${c.unidade})`);
+  popularSelect('calc-ref-tipo', cat.refrigerantes, c => c.id, c => `${c.label} · GWP ${c.gwp.toLocaleString('pt-BR')}`);
+  popularSelect('calc-cad-setor', cat.setores_cadeia, c => c.id, c => c.label);
+  popularSelect('calc-trp-veic', cat.veiculos_transporte.map(v => ({id: v, label: v.replace(/_/g, ' ')})),
+                c => c.id, c => c.label);
+
+  // Recriar ícones
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  // Setup de previews live
+  setupCalcPreview('combustivel', ['calc-comb-tipo', 'calc-comb-qtd', 'calc-comb-cat'],
+                   () => ({ combustivel: gv('calc-comb-tipo'), quantidade: gv('calc-comb-qtd') }),
+                   'calc-comb-preview', 'calc-comb-result',
+                   () => atualizarUnidadeCombustivel());
+  setupCalcPreview('eletricidade', ['calc-ele-kwh'],
+                   () => ({ kwh: gv('calc-ele-kwh') }),
+                   'calc-ele-preview', 'calc-ele-result');
+  setupCalcPreview('refrigerante', ['calc-ref-tipo', 'calc-ref-kg'],
+                   () => ({ refrigerante: gv('calc-ref-tipo'), kg_vazados: gv('calc-ref-kg') }),
+                   'calc-ref-preview', 'calc-ref-result');
+  setupCalcPreview('cadeia', ['calc-cad-setor', 'calc-cad-valor'],
+                   () => ({ setor: gv('calc-cad-setor'), valor_reais: gv('calc-cad-valor') }),
+                   'calc-cad-preview', 'calc-cad-result');
+  setupCalcPreview('transporte', ['calc-trp-km', 'calc-trp-ton', 'calc-trp-veic'],
+                   () => ({ km: gv('calc-trp-km'), toneladas: gv('calc-trp-ton'), veiculo: gv('calc-trp-veic') }),
+                   'calc-trp-preview', 'calc-trp-result');
+
+  atualizarUnidadeCombustivel();
+}
+
+function gv(id) { return document.getElementById(id)?.value; }
+
+function popularSelect(id, items, valFn, labelFn) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = items.map(i => `<option value="${valFn(i)}">${labelFn(i)}</option>`).join('');
+}
+
+function atualizarUnidadeCombustivel() {
+  const tipo = gv('calc-comb-tipo');
+  const cat = CALC_STATE.catalogo;
+  if (!tipo || !cat) return;
+  const item = cat.combustiveis.find(c => c.id === tipo);
+  if (item) document.getElementById('calc-comb-unit').textContent = `tCO₂e por ${item.unidade}`;
+}
+
+function setupCalcPreview(tipo, ids, getDados, previewId, resultId, extraCb) {
+  const recalc = () => {
+    const d = getDados();
+    const v = previewLocal(tipo, d);
+    if (v === null || isNaN(v)) {
+      document.getElementById(previewId).textContent = '';
+      return;
+    }
+    document.getElementById(previewId).textContent = `Preview local: ${fmt(v, 6)} tCO₂e`;
+    if (extraCb) extraCb();
+  };
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', recalc);
+    if (el) el.addEventListener('change', recalc);
+  });
+  recalc();
+}
+
+// === Executar cálculo no backend (valor final) ===========================
+async function executarCalc(tipo) {
+  if (!state.token) { abrirModalLogin(); return; }
+
+  const payload = montarPayload(tipo, false);  // hub: aplicado_em_emissao_id ausente
+  if (!payload) return;
+
+  const resultId = `calc-${tipo === 'combustivel' ? 'comb' :
+                          tipo === 'eletricidade' ? 'ele' :
+                          tipo === 'refrigerante' ? 'ref' :
+                          tipo === 'cadeia' ? 'cad' : 'trp'}-result`;
+  const elResult = document.getElementById(resultId);
+  elResult.textContent = '…';
+
+  try {
+    const data = await api(`/api/v1/calculadoras/${tipo}`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    elResult.textContent = fmt(data.tco2e, 4);
+    let msg = `${tipo}: ${fmt(data.tco2e, 4)} tCO₂e`;
+    if (payload.salvar) msg += ' · salvo no histórico';
+    toast(msg, 'success');
+  } catch (e) {
+    elResult.textContent = '—';
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function montarPayload(tipo, paraContexto) {
+  let p;
+  if (tipo === 'combustivel') {
+    p = {
+      combustivel: gv('calc-comb-tipo'),
+      quantidade: parseFloat(gv('calc-comb-qtd')) || 0,
+      categoria: gv('calc-comb-cat'),
+      escopo: gv('calc-comb-cat') === 'combustivel_movel' ? 1 : 1,
+      salvar: document.getElementById('calc-comb-save').checked,
+    };
+    if (p.quantidade <= 0) { toast('Informe quantidade > 0', 'warn'); return null; }
+  } else if (tipo === 'eletricidade') {
+    p = { kwh: parseFloat(gv('calc-ele-kwh')) || 0,
+          salvar: document.getElementById('calc-ele-save').checked };
+    if (p.kwh <= 0) { toast('Informe kWh > 0', 'warn'); return null; }
+  } else if (tipo === 'refrigerante') {
+    p = { refrigerante: gv('calc-ref-tipo'),
+          kg_vazados: parseFloat(gv('calc-ref-kg')) || 0,
+          salvar: document.getElementById('calc-ref-save').checked };
+    if (p.kg_vazados <= 0) { toast('Informe kg vazados > 0', 'warn'); return null; }
+  } else if (tipo === 'cadeia') {
+    p = { setor: gv('calc-cad-setor'),
+          valor_reais: parseFloat(gv('calc-cad-valor')) || 0,
+          salvar: document.getElementById('calc-cad-save').checked };
+    if (p.valor_reais <= 0) { toast('Informe valor > 0', 'warn'); return null; }
+  } else if (tipo === 'transporte') {
+    p = { km: parseFloat(gv('calc-trp-km')) || 0,
+          toneladas: parseFloat(gv('calc-trp-ton')) || 1,
+          veiculo: gv('calc-trp-veic'),
+          salvar: document.getElementById('calc-trp-save').checked };
+    if (p.km <= 0) { toast('Informe km > 0', 'warn'); return null; }
+  }
+  return p;
+}
+
+// === Trocar aba Hub/Histórico ============================================
+function trocarAbaCalc(aba) {
+  document.querySelectorAll('.calc-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.calcTab === aba);
+  });
+  document.getElementById('calc-aba-hub').classList.toggle('hidden', aba !== 'hub');
+  document.getElementById('calc-aba-historico').classList.toggle('hidden', aba !== 'historico');
+  if (aba === 'historico') carregarHistorico();
+}
+
+// === Histórico ===========================================================
+async function carregarHistorico() {
+  const tbody = document.getElementById('tbl-historico');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Carregando…</td></tr>';
+  try {
+    const data = await api('/api/v1/calculadoras/historico?limit=100');
+    const lista = data?.dados || [];
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum cálculo salvo ainda. Marque "Salvar no histórico" ao calcular.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(c => {
+      const dt = c.criado_em ? new Date(c.criado_em).toLocaleString('pt-BR') : '—';
+      const entrada = c.entrada ? Object.entries(c.entrada).map(([k,v]) => `${k}=${v}`).join(', ') : '—';
+      const aplicado = c.aplicado_em_emissao_id
+        ? `<span class="text-xs">#${c.aplicado_em_emissao_id} → ${c.campo_destino || '?'}</span>`
+        : '<span class="text-xs text-stone-400">—</span>';
+      return `
+        <tr>
+          <td class="text-xs text-stone-500">${dt}</td>
+          <td><span class="font-semibold">${c.tipo}</span></td>
+          <td><span class="escopo-tag e${c.escopo}">E${c.escopo}</span></td>
+          <td class="text-xs text-stone-600">${entrada}</td>
+          <td class="text-right font-mono text-mbv-dark font-semibold">${fmt(c.tco2e, 6)}</td>
+          <td>${aplicado}</td>
+          <td><button onclick="removerHistorico(${c.id})" class="text-red-500 hover:text-red-700 text-xs">
+            <i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+        </tr>`;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state text-red-700">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+async function removerHistorico(id) {
+  if (!confirm('Remover este cálculo do histórico?')) return;
+  try {
+    await api(`/api/v1/calculadoras/historico/${id}`, { method: 'DELETE' });
+    toast('Cálculo removido.', 'success');
+    carregarHistorico();
+  } catch (e) {
+    toast('Erro ao remover: ' + e.message, 'error');
+  }
+}
+
+// === MODAL CONTEXTUAL (botão 🧮 ao lado dos campos) ======================
+const CTX_TEMPLATES = {
+  // tipo no modal contextual → endpoint backend e campos
+  'combustivel-estacionario': {
+    titulo: 'Calcular combustível estacionário',
+    endpoint: 'combustivel',
+    extras: { categoria: 'combustivel_estacionario', escopo: 1 },
+    fields: [
+      { id: 'combustivel', label: 'Tipo', type: 'select', source: 'combustiveis' },
+      { id: 'quantidade',  label: 'Quantidade', type: 'number', step: '0.01' },
+    ],
+  },
+  'combustivel-movel': {
+    titulo: 'Calcular combustível móvel (frota)',
+    endpoint: 'combustivel',
+    extras: { categoria: 'combustivel_movel', escopo: 1 },
+    fields: [
+      { id: 'combustivel', label: 'Tipo', type: 'select', source: 'combustiveis' },
+      { id: 'quantidade',  label: 'Quantidade', type: 'number', step: '0.01' },
+    ],
+  },
+  'eletricidade': {
+    titulo: 'Calcular energia elétrica',
+    endpoint: 'eletricidade',
+    extras: {},
+    fields: [{ id: 'kwh', label: 'Consumo (kWh)', type: 'number', step: '0.01' }],
+  },
+  'refrigerante': {
+    titulo: 'Calcular refrigerante (fugitivo)',
+    endpoint: 'refrigerante',
+    extras: {},
+    fields: [
+      { id: 'refrigerante', label: 'Tipo', type: 'select', source: 'refrigerantes' },
+      { id: 'kg_vazados',   label: 'Kg vazados', type: 'number', step: '0.001' },
+    ],
+  },
+  'cadeia': {
+    titulo: 'Calcular cadeia de fornecimento',
+    endpoint: 'cadeia',
+    extras: {},
+    fields: [
+      { id: 'setor',       label: 'Setor', type: 'select', source: 'setores_cadeia' },
+      { id: 'valor_reais', label: 'Valor compras (R$)', type: 'number', step: '0.01' },
+    ],
+  },
+  'transporte': {
+    titulo: 'Calcular transporte rodoviário',
+    endpoint: 'transporte',
+    extras: {},
+    fields: [
+      { id: 'km',        label: 'Distância (km)', type: 'number', step: '0.1' },
+      { id: 'toneladas', label: 'Carga (ton)',    type: 'number', step: '0.1', valor: '1' },
+      { id: 'veiculo',   label: 'Veículo',        type: 'select', source: 'veiculos_transporte' },
+    ],
+  },
+};
+
+async function abrirCalcContextual(tipo, campoDestino) {
+  if (!state.token) { abrirModalLogin(); return; }
+  const cat = await carregarCatalogo();
+  if (!cat) return;
+
+  const tpl = CTX_TEMPLATES[tipo];
+  if (!tpl) return;
+
+  CALC_STATE.contextual = { tipo, campoDestino, ultimoResultado: null };
+
+  document.getElementById('calc-modal-title').textContent = tpl.titulo;
+  document.getElementById('calc-modal-target').textContent = campoDestino;
+
+  // Construir form dinâmico
+  const form = document.getElementById('calc-modal-form');
+  form.innerHTML = tpl.fields.map(f => {
+    if (f.type === 'select') {
+      const items = cat[f.source];
+      const opts = (items || []).map(i => {
+        if (typeof i === 'string') return `<option value="${i}">${i.replace(/_/g, ' ')}</option>`;
+        return `<option value="${i.id}">${i.label || i.id}</option>`;
+      }).join('');
+      return `<div><label class="field-label">${f.label}</label>
+              <select class="field-input" id="ctx-${f.id}">${opts}</select></div>`;
+    }
+    return `<div><label class="field-label">${f.label}</label>
+            <input class="field-input" id="ctx-${f.id}" type="number" step="${f.step || '0.01'}" value="${f.valor || ''}" /></div>`;
+  }).join('');
+
+  document.getElementById('calc-modal-result').classList.add('hidden');
+  document.getElementById('btn-aplicar-contextual').classList.add('hidden');
+  document.getElementById('calc-modal-save').checked = false;
+  document.getElementById('calc-modal').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function fecharCalcContextual() {
+  document.getElementById('calc-modal').classList.add('hidden');
+  CALC_STATE.contextual = null;
+}
+
+async function calcularContextual() {
+  const ctx = CALC_STATE.contextual;
+  if (!ctx) return;
+  const tpl = CTX_TEMPLATES[ctx.tipo];
+  const payload = { ...tpl.extras };
+
+  // Coletar campos
+  for (const f of tpl.fields) {
+    const val = document.getElementById(`ctx-${f.id}`).value;
+    payload[f.id] = f.type === 'number' ? parseFloat(val) || 0 : val;
+  }
+  payload.salvar = document.getElementById('calc-modal-save').checked;
+  payload.campo_destino = ctx.campoDestino;
+
+  try {
+    const data = await api(`/api/v1/calculadoras/${tpl.endpoint}`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    ctx.ultimoResultado = data.tco2e;
+    document.getElementById('calc-modal-value').textContent = fmt(data.tco2e, 6);
+    document.getElementById('calc-modal-result').classList.remove('hidden');
+    document.getElementById('btn-aplicar-contextual').classList.remove('hidden');
+    if (payload.salvar) toast('Cálculo salvo no histórico.', 'success');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function aplicarContextual() {
+  const ctx = CALC_STATE.contextual;
+  if (!ctx || ctx.ultimoResultado === null) return;
+  const input = document.querySelector(`[name="${ctx.campoDestino}"]`);
+  if (input) {
+    input.value = ctx.ultimoResultado.toFixed(6);
+    input.dispatchEvent(new Event('input'));  // dispara recálculo do preview do inventário
+    toast(`Valor ${fmt(ctx.ultimoResultado, 4)} aplicado em ${ctx.campoDestino}`, 'success');
+  }
+  fecharCalcContextual();
+}
+
 
 /* ---------- Inicialização ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
