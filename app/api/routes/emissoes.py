@@ -4,21 +4,22 @@ Compatível com integração SAP/TOTVS — aceita payload padrão GHG Protocol.
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
- 
+
 from app.api.auth import usuario_autenticado
+from app.database.client import get_db_client
 from app.services.motor_ia import (
+    calcular_inventario,
     calcular_por_balanco,
     DeclaracaoEmpresa,
     listar_categorias_setoriais,
 )
- 
+
 router = APIRouter()
 
 
 # ── Schemas Pydantic ──────────────────────────────────────────────────────────
-
 
 class DeclaracaoBalancoEntrada(BaseModel):
     empresa: str = Field(..., description="Razão social ou nome fantasia")
@@ -36,7 +37,7 @@ class DeclaracaoBalancoEntrada(BaseModel):
     gasto_combustivel: float = Field(0.0, description="Gasto anual com combustível (R$) — refina Escopo 1")
     gasto_energia_eletrica: float = Field(0.0, description="Gasto anual com energia elétrica (R$) — refina Escopo 2")
     compras_insumos: float = Field(0.0, description="Compras de insumos/materiais (R$) — refina Escopo 3")
- 
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -48,7 +49,8 @@ class DeclaracaoBalancoEntrada(BaseModel):
                 "compras_insumos": 28_000_000.0,
             }
         }
-        
+
+
 class EmissaoEntrada(BaseModel):
     empresa: str = Field(..., description="Razão social ou nome fantasia")
     cnpj_cpf: Optional[str] = Field(None, description="CNPJ ou CPF do responsável")
@@ -101,6 +103,13 @@ class AtividadeIA(BaseModel):
     km: Optional[float] = None
     toneladas: Optional[float] = 1.0
     veiculo: Optional[str] = "caminhao_diesel"
+    # Campos do modo balanço (quando tipo_calculo == "balanco")
+    empresa: Optional[str] = None
+    ano_referencia: Optional[int] = None
+    faturamento_bruto: Optional[float] = None
+    gasto_combustivel: Optional[float] = None
+    gasto_energia_eletrica: Optional[float] = None
+    compras_insumos: Optional[float] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -109,8 +118,34 @@ class AtividadeIA(BaseModel):
 def listar_categorias(usuario: dict = Depends(usuario_autenticado)):
     """Retorna as categorias (chave + rótulo) aceitas no cálculo por balanço."""
     return [{"chave": chave, "rotulo": rotulo} for chave, rotulo in listar_categorias_setoriais()]
- 
- 
+
+
+@router.get("/cnpj/{cnpj}", summary="Consultar CNPJ (dados cadastrais + categoria sugerida)")
+def consultar_cnpj_endpoint(cnpj: str, usuario: dict = Depends(usuario_autenticado)):
+    """
+    Consulta dados PÚBLICOS do CNPJ (BrasilAPI/RFB) e sugere a categoria
+    setorial a partir do CNAE principal.
+
+    NÃO retorna faturamento — esse dado não é público; deve ser informado
+    pelo usuário (ou obtido via CVM, para companhias abertas).
+    """
+    from app.services.cnpj import consultar_cnpj
+    try:
+        dados = consultar_cnpj(cnpj)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Acrescenta o rótulo amigável da categoria sugerida
+    rotulo = ""
+    if dados.get("categoria_sugerida"):
+        for chave, rot in listar_categorias_setoriais():
+            if chave == dados["categoria_sugerida"]:
+                rotulo = rot
+                break
+    dados["categoria_rotulo"] = rotulo
+    return dados
+
+
 @router.post("/calcular-balanco", summary="Calcular inventário por balanço/declaração (sem salvar)")
 def calcular_balanco(
     dados: DeclaracaoBalancoEntrada,
@@ -118,11 +153,11 @@ def calcular_balanco(
 ):
     """
     Estima o inventário a partir da declaração da empresa.
- 
+
     A categoria define a distribuição entre escopos; o faturamento define o
     tamanho. Gastos específicos (combustível, energia, compras), quando
     informados, refinam o escopo correspondente.
- 
+
     Método spend-based/EEIO — adequado para triagem e nível de monitoramento.
     Para >25.000 tCO2e/ano, refine os Escopos 1 e 2 com dado de atividade
     via POST /emissoes/calcular-ia.
