@@ -4,18 +4,51 @@ Compatível com integração SAP/TOTVS — aceita payload padrão GHG Protocol.
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
-
+ 
 from app.api.auth import usuario_autenticado
-from app.database.client import get_db_client
-from app.services.motor_ia import calcular_inventario
-
+from app.services.motor_ia import (
+    calcular_por_balanco,
+    DeclaracaoEmpresa,
+    listar_categorias_setoriais,
+)
+ 
 router = APIRouter()
 
 
 # ── Schemas Pydantic ──────────────────────────────────────────────────────────
 
+
+class DeclaracaoBalancoEntrada(BaseModel):
+    empresa: str = Field(..., description="Razão social ou nome fantasia")
+    cnpj_cpf: Optional[str] = Field(None, description="CNPJ ou CPF do responsável")
+    ano_referencia: int = Field(..., description="Ano do inventário (ex: 2026)")
+    categoria: str = Field(
+        ...,
+        description="Categoria econômica (ex: 'construcao_civil', 'transporte_logistica', "
+                    "'agronegocio'). Use GET /emissoes/categorias para a lista.",
+    )
+    faturamento_bruto: float = Field(
+        ..., description="Receita bruta anual em R$ (base principal do cálculo)"
+    )
+    # Refinamentos opcionais — quando > 0, têm prioridade sobre a estimativa por receita
+    gasto_combustivel: float = Field(0.0, description="Gasto anual com combustível (R$) — refina Escopo 1")
+    gasto_energia_eletrica: float = Field(0.0, description="Gasto anual com energia elétrica (R$) — refina Escopo 2")
+    compras_insumos: float = Field(0.0, description="Compras de insumos/materiais (R$) — refina Escopo 3")
+ 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "empresa": "Construtora Exemplo Ltda",
+                "cnpj_cpf": "12.345.678/0001-99",
+                "ano_referencia": 2026,
+                "categoria": "construcao_civil",
+                "faturamento_bruto": 50_000_000.0,
+                "compras_insumos": 28_000_000.0,
+            }
+        }
+        
 class EmissaoEntrada(BaseModel):
     empresa: str = Field(..., description="Razão social ou nome fantasia")
     cnpj_cpf: Optional[str] = Field(None, description="CNPJ ou CPF do responsável")
@@ -71,6 +104,60 @@ class AtividadeIA(BaseModel):
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.get("/categorias", summary="Listar categorias setoriais disponíveis")
+def listar_categorias(usuario: dict = Depends(usuario_autenticado)):
+    """Retorna as categorias (chave + rótulo) aceitas no cálculo por balanço."""
+    return [{"chave": chave, "rotulo": rotulo} for chave, rotulo in listar_categorias_setoriais()]
+ 
+ 
+@router.post("/calcular-balanco", summary="Calcular inventário por balanço/declaração (sem salvar)")
+def calcular_balanco(
+    dados: DeclaracaoBalancoEntrada,
+    usuario: dict = Depends(usuario_autenticado),
+):
+    """
+    Estima o inventário a partir da declaração da empresa.
+ 
+    A categoria define a distribuição entre escopos; o faturamento define o
+    tamanho. Gastos específicos (combustível, energia, compras), quando
+    informados, refinam o escopo correspondente.
+ 
+    Método spend-based/EEIO — adequado para triagem e nível de monitoramento.
+    Para >25.000 tCO2e/ano, refine os Escopos 1 e 2 com dado de atividade
+    via POST /emissoes/calcular-ia.
+    """
+    decl = DeclaracaoEmpresa(
+        empresa=dados.empresa,
+        categoria=dados.categoria,
+        ano_referencia=dados.ano_referencia,
+        cnpj_cpf=dados.cnpj_cpf or "",
+        faturamento_bruto=dados.faturamento_bruto,
+        gasto_combustivel=dados.gasto_combustivel,
+        gasto_energia_eletrica=dados.gasto_energia_eletrica,
+        compras_insumos=dados.compras_insumos,
+    )
+    relatorio = calcular_por_balanco(decl)
+    return {
+        "metodo": relatorio.metodo,
+        "categoria": relatorio.categoria,
+        "escopo1_total": relatorio.escopo1_total,
+        "escopo2_total": relatorio.escopo2_total,
+        "escopo3_total": relatorio.escopo3_total,
+        "total_tco2e": relatorio.total_tco2e,
+        "campos_emissao": relatorio.para_emissao_dict(),
+        "detalhes": [
+            {
+                "escopo": r.atividade.escopo,
+                "tco2e": r.tco2e,
+                "fator": r.fator_utilizado,
+                "unidade_fator": r.unidade_fator,
+                "nota": r.nota,
+            }
+            for r in relatorio.resultados
+        ],
+    }
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED,
              summary="Registrar inventário de emissões")
