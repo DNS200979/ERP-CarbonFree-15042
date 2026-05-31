@@ -2,8 +2,25 @@
 Módulo 2 — Motor de IA para cálculo preciso de emissões de carbono.
 
 Utiliza fatores de emissão do IPCC AR6, GHG Protocol Brasil e MCTI
-para converter dados de atividade (consumo de combustível, energia, etc.)
-em tCO2e, sem necessidade de entrada manual dos valores finais.
+para converter"""
+Módulo 2 — Motor de IA para cálculo preciso de emissões de carbono.
+
+Dois modos de cálculo, complementares:
+
+  1. POR ATIVIDADE (preexistente): consumo físico (litros, kWh, km, kg) →
+     tCO2e com fatores IPCC AR6, GHG Protocol Brasil e MCTI. Método primário,
+     exigido para o mercado regulado (>25.000 tCO2e/ano, Lei 15.042/2024) nos
+     Escopos 1 e 2.
+
+  2. POR BALANÇO / DECLARAÇÃO (novo): a empresa declara sua CATEGORIA econômica
+     e dados do balanço (faturamento, e opcionalmente gastos com energia,
+     combustível e compras de insumos). O sistema estima tCO2e por escopo usando
+     intensidades setoriais (spend-based / EEIO). É método de TRIAGEM, adequado
+     ao nível de monitoramento (10k–25k tCO2e) e ao Escopo 3. A categoria define
+     COMO o total se distribui entre os escopos; o balanço define o TAMANHO.
+
+Os dois modos produzem a mesma estrutura (RelatorioIA) e preenchem os mesmos
+campos do modelo Emissao, então podem ser misturados num único inventário.
 """
 
 from dataclasses import dataclass, field
@@ -48,8 +65,11 @@ FATORES_REFRIGERANTES: dict[str, float] = {
 }
 
 # Fatores Escopo 3 — estimativas por setor (tCO2e por R$ 1000 comprados)
+# Usados tanto no cálculo de cadeia por atividade quanto como refinamento de
+# Escopo 3 no cálculo por balanço (quando há valor de compras declarado).
 FATORES_CADEIA_FORNECIMENTO: dict[str, float] = {
     "agropecuaria":              0.320,
+    "agronegocio":               0.320,
     "industria_alimenticia":     0.180,
     "industria_metalurgica":     0.420,
     "industria_quimica":         0.350,
@@ -59,7 +79,98 @@ FATORES_CADEIA_FORNECIMENTO: dict[str, float] = {
     "servicos_financeiros":      0.030,
     "construcao_civil":          0.380,
     "transporte_logistica":      0.290,
+    "mineracao":                 0.250,
+    "papel_celulose":            0.220,
+    "textil":                    0.180,
+    "energia_geracao":           0.100,
 }
+
+
+# ── Perfis setoriais para cálculo POR BALANÇO (declaração da empresa) ──────────
+# Intensidades de emissão por CATEGORIA econômica, em tCO2e por R$ 1.000 de
+# RECEITA BRUTA (faturamento) declarada, separadas por escopo.
+#
+#   i_e1 = Escopo 1 (combustão própria, processos, frota, fugitivas)
+#   i_e2 = Escopo 2 (energia elétrica/vapor comprados)
+#   i_e3 = Escopo 3 (cadeia de fornecimento) — espelha FATORES_CADEIA_FORNECIMENTO
+#
+# >>> ATENÇÃO — CALIBRAÇÃO <<<
+# Estes são valores INDICATIVOS, escolhidos para dar estrutura ao cálculo e
+# guardar a proporção correta entre setores. ANTES de usar em produção, calibre
+# com fontes oficiais brasileiras: SEEG, MCTI "Fatores de Emissão", matriz de
+# insumo-produto (EEIO/IBGE). O método spend-based é de TRIAGEM; no mercado
+# regulado os Escopos 1 e 2 devem ser refinados com dado de atividade.
+
+PERFIL_PADRAO = {"rotulo": "Categoria não especificada", "i_e1": 0.050, "i_e2": 0.030, "i_e3": 0.150}
+
+PERFIS_SETORIAIS: dict[str, dict] = {
+    "agronegocio": {
+        "rotulo": "Agronegócio / Produção primária",
+        # Produção primária agropecuária é EXCLUÍDA do regime regulado (Lei 15.042),
+        # mas ainda gera inventário e pode GERAR CRVE. Emissões biológicas
+        # (fermentação entérica, solo) normalmente NÃO entram via balanço financeiro.
+        "i_e1": 0.450, "i_e2": 0.030, "i_e3": 0.320,
+    },
+    "industria_alimenticia": {
+        "rotulo": "Indústria alimentícia / Frigoríficos",
+        "i_e1": 0.120, "i_e2": 0.080, "i_e3": 0.180,
+    },
+    "industria_metalurgica": {
+        "rotulo": "Indústria metalúrgica / Siderurgia",
+        "i_e1": 0.350, "i_e2": 0.100, "i_e3": 0.420,
+    },
+    "industria_quimica": {
+        "rotulo": "Indústria química",
+        "i_e1": 0.220, "i_e2": 0.090, "i_e3": 0.350,
+    },
+    "industria_cimento": {
+        "rotulo": "Indústria de cimento",
+        "i_e1": 0.650, "i_e2": 0.080, "i_e3": 0.200,  # E1 alto: CO2 de processo (calcinação)
+    },
+    "comercio_varejo": {
+        "rotulo": "Comércio / Varejo",
+        "i_e1": 0.020, "i_e2": 0.040, "i_e3": 0.085,
+    },
+    "servicos_ti": {
+        "rotulo": "Serviços / TI",
+        "i_e1": 0.005, "i_e2": 0.030, "i_e3": 0.040,
+    },
+    "servicos_financeiros": {
+        "rotulo": "Serviços financeiros",
+        "i_e1": 0.004, "i_e2": 0.020, "i_e3": 0.030,
+    },
+    "construcao_civil": {
+        "rotulo": "Construção civil",
+        "i_e1": 0.045, "i_e2": 0.020, "i_e3": 0.380,  # E3 alto: cimento, aço, materiais
+    },
+    "transporte_logistica": {
+        "rotulo": "Transporte e logística",
+        "i_e1": 0.260, "i_e2": 0.010, "i_e3": 0.060,  # E1 alto: combustão da frota
+    },
+    "mineracao": {
+        "rotulo": "Mineração",
+        "i_e1": 0.300, "i_e2": 0.120, "i_e3": 0.250,
+    },
+    "papel_celulose": {
+        "rotulo": "Papel e celulose",
+        "i_e1": 0.200, "i_e2": 0.100, "i_e3": 0.220,
+    },
+    "textil": {
+        "rotulo": "Indústria têxtil",
+        "i_e1": 0.100, "i_e2": 0.090, "i_e3": 0.180,
+    },
+    "energia_geracao": {
+        "rotulo": "Geração de energia",
+        "i_e1": 0.500, "i_e2": 0.020, "i_e3": 0.100,
+    },
+}
+
+# Fatores de refinamento spend-based específicos (tCO2e por R$ 1.000 GASTOS
+# naquele item). Diferentes das intensidades por receita acima. Indicativos:
+#   - Energia: ~R$0,70/kWh e 0,0907 kgCO2e/kWh ⇒ ~0,13 tCO2e por R$1.000
+#   - Combustível: diesel ~R$6/L e ~2,6 kgCO2e/L ⇒ ~0,43 tCO2e por R$1.000
+FATOR_GASTO_ENERGIA = 0.13       # tCO2e / R$ 1.000 gastos em energia elétrica
+FATOR_GASTO_COMBUSTIVEL = 0.43   # tCO2e / R$ 1.000 gastos em combustível
 
 
 @dataclass
@@ -86,6 +197,9 @@ class ResultadoCalculo:
 class RelatorioIA:
     entradas: list[EntradaAtividade] = field(default_factory=list)
     resultados: list[ResultadoCalculo] = field(default_factory=list)
+    # Metadados opcionais (preenchidos pelo cálculo por balanço)
+    metodo: str = "atividade"          # "atividade" | "balanco" | "misto"
+    categoria: str = ""
 
     @property
     def escopo1_total(self) -> float:
@@ -122,6 +236,8 @@ class RelatorioIA:
                     campos["e1_processos"] += r.tco2e
                 elif cat == "refrigerante":
                     campos["e1_fugitivas"] += r.tco2e
+                else:  # E1 agregado vindo do balanço
+                    campos["e1_estacionario"] += r.tco2e
             elif r.atividade.escopo == 2:
                 if cat == "vapor":
                     campos["e2_vapor"] += r.tco2e
@@ -136,6 +252,8 @@ class RelatorioIA:
                     campos["e3_cadeia"] += r.tco2e
         return {k: round(v, 6) for k, v in campos.items()}
 
+
+# ── Cálculo POR ATIVIDADE (preexistente) ────────────────────────────────────
 
 def calcular_combustivel(
     combustivel: str,
@@ -255,15 +373,128 @@ def calcular_transporte_rodoviario(
     )
 
 
+# ── Cálculo POR BALANÇO / DECLARAÇÃO (novo) ──────────────────────────────────
+
+@dataclass
+class DeclaracaoEmpresa:
+    """
+    Declaração da empresa para cálculo de inventário por balanço.
+
+    Base obrigatória: categoria + faturamento_bruto.
+    Os demais campos são REFINAMENTOS OPCIONAIS — quando preenchidos (>0),
+    substituem a estimativa por receita do escopo correspondente por uma
+    estimativa mais precisa baseada no gasto específico.
+    """
+    empresa: str
+    categoria: str                      # chave de PERFIS_SETORIAIS
+    ano_referencia: int
+    cnpj_cpf: str = ""
+    faturamento_bruto: float = 0.0      # receita bruta anual (R$) — base principal
+
+    # Refinamentos opcionais (R$):
+    gasto_combustivel: float = 0.0      # → refina Escopo 1
+    gasto_energia_eletrica: float = 0.0 # → refina Escopo 2
+    compras_insumos: float = 0.0        # → refina Escopo 3 (fator de cadeia do setor)
+
+
+def _chave_categoria(categoria: str) -> str:
+    return (categoria or "").strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def calcular_por_balanco(decl: DeclaracaoEmpresa) -> RelatorioIA:
+    """
+    Estima o inventário (Escopos 1, 2 e 3) a partir da declaração da empresa.
+
+    A CATEGORIA define a distribuição entre escopos (intensidades setoriais);
+    o FATURAMENTO define o tamanho. Refinamentos por gasto, quando informados,
+    têm prioridade sobre a estimativa por receita.
+
+    Retorna um RelatorioIA — mesma estrutura do cálculo por atividade —, então
+    `para_emissao_dict()`, totais por escopo e status funcionam igual.
+    """
+    chave = _chave_categoria(decl.categoria)
+    perfil = PERFIS_SETORIAIS.get(chave, PERFIL_PADRAO)
+    rotulo = perfil.get("rotulo", decl.categoria)
+    receita_mil = (decl.faturamento_bruto or 0.0) / 1000.0  # R$ → milhares de R$
+
+    rel = RelatorioIA(metodo="balanco", categoria=chave)
+
+    # ── Escopo 1 ──
+    if decl.gasto_combustivel and decl.gasto_combustivel > 0:
+        base_e1 = decl.gasto_combustivel
+        e1 = round(base_e1 / 1000.0 * FATOR_GASTO_COMBUSTIVEL, 6)
+        fator_e1, fonte_e1, uni_e1 = FATOR_GASTO_COMBUSTIVEL, "gasto com combustível (R$)", "tCO2e/R$ 1000"
+    else:
+        base_e1 = decl.faturamento_bruto or 0.0
+        e1 = round(receita_mil * perfil["i_e1"], 6)
+        fator_e1, fonte_e1, uni_e1 = perfil["i_e1"], "faturamento (R$)", "tCO2e/R$ 1000 receita"
+
+    # ── Escopo 2 ──
+    if decl.gasto_energia_eletrica and decl.gasto_energia_eletrica > 0:
+        base_e2 = decl.gasto_energia_eletrica
+        e2 = round(base_e2 / 1000.0 * FATOR_GASTO_ENERGIA, 6)
+        fator_e2, fonte_e2, uni_e2 = FATOR_GASTO_ENERGIA, "gasto com energia (R$)", "tCO2e/R$ 1000"
+    else:
+        base_e2 = decl.faturamento_bruto or 0.0
+        e2 = round(receita_mil * perfil["i_e2"], 6)
+        fator_e2, fonte_e2, uni_e2 = perfil["i_e2"], "faturamento (R$)", "tCO2e/R$ 1000 receita"
+
+    # ── Escopo 3 ──
+    if decl.compras_insumos and decl.compras_insumos > 0:
+        base_e3 = decl.compras_insumos
+        fator_cadeia = FATORES_CADEIA_FORNECIMENTO.get(chave, 0.150)
+        e3 = round(base_e3 / 1000.0 * fator_cadeia, 6)
+        fator_e3, fonte_e3, uni_e3 = fator_cadeia, "compras de insumos (R$)", "tCO2e/R$ 1000"
+    else:
+        base_e3 = decl.faturamento_bruto or 0.0
+        e3 = round(receita_mil * perfil["i_e3"], 6)
+        fator_e3, fonte_e3, uni_e3 = perfil["i_e3"], "faturamento (R$)", "tCO2e/R$ 1000 receita"
+
+    # Monta resultados (categorias mapeiam direto para os campos de Emissao)
+    r1 = ResultadoCalculo(
+        atividade=EntradaAtividade(1, "combustivel_estacionario", f"balanco:{chave}", base_e1,
+                                   f"Escopo 1 estimado — {rotulo}"),
+        tco2e=e1, fator_utilizado=fator_e1, unidade_fator=uni_e1,
+        nota=f"Base: {fonte_e1} | {rotulo}",
+    )
+    r2 = ResultadoCalculo(
+        atividade=EntradaAtividade(2, "eletricidade", f"balanco:{chave}", base_e2,
+                                   f"Escopo 2 estimado — {rotulo}"),
+        tco2e=e2, fator_utilizado=fator_e2, unidade_fator=uni_e2,
+        nota=f"Base: {fonte_e2} | {rotulo}",
+    )
+    r3 = ResultadoCalculo(
+        atividade=EntradaAtividade(3, "cadeia", f"balanco:{chave}", base_e3,
+                                   f"Escopo 3 estimado — {rotulo}"),
+        tco2e=e3, fator_utilizado=fator_e3, unidade_fator=uni_e3,
+        nota=f"Base: {fonte_e3} | {rotulo}",
+    )
+
+    rel.entradas.extend([r1.atividade, r2.atividade, r3.atividade])
+    rel.resultados.extend([r1, r2, r3])
+    return rel
+
+
+# ── Ponto de entrada unificado ───────────────────────────────────────────────
+
 def calcular_inventario(atividades: list[dict[str, Any]]) -> RelatorioIA:
     """
     Ponto de entrada principal. Recebe lista de atividades e retorna RelatorioIA.
 
     Cada atividade é um dict com campos:
-        tipo_calculo: "combustivel" | "eletricidade" | "refrigerante" | "cadeia" | "transporte"
+        tipo_calculo: "combustivel" | "eletricidade" | "refrigerante"
+                      | "cadeia" | "transporte" | "balanco"
         + parâmetros específicos de cada tipo
+
+    Para "balanco", os campos esperados são os de DeclaracaoEmpresa
+    (categoria, faturamento_bruto e, opcionalmente, gasto_combustivel,
+    gasto_energia_eletrica, compras_insumos).
+
+    É possível MISTURAR métodos: ex. uma entrada "balanco" para a base setorial
+    + entradas "combustivel"/"eletricidade" para refinar com dado de atividade.
     """
     relatorio = RelatorioIA()
+    metodos_usados: set[str] = set()
 
     for item in atividades:
         tipo = item.get("tipo_calculo", "")
@@ -293,15 +524,41 @@ def calcular_inventario(atividades: list[dict[str, Any]]) -> RelatorioIA:
                     tipo_veiculo=item.get("veiculo", "caminhao_diesel"),
                     toneladas_carga=float(item.get("toneladas", 1.0)),
                 )
+            elif tipo == "balanco":
+                decl = DeclaracaoEmpresa(
+                    empresa=item.get("empresa", ""),
+                    categoria=item.get("categoria", ""),
+                    ano_referencia=int(item.get("ano_referencia", 0)),
+                    cnpj_cpf=item.get("cnpj_cpf", ""),
+                    faturamento_bruto=float(item.get("faturamento_bruto", 0) or 0),
+                    gasto_combustivel=float(item.get("gasto_combustivel", 0) or 0),
+                    gasto_energia_eletrica=float(item.get("gasto_energia_eletrica", 0) or 0),
+                    compras_insumos=float(item.get("compras_insumos", 0) or 0),
+                )
+                sub = calcular_por_balanco(decl)
+                relatorio.entradas.extend(sub.entradas)
+                relatorio.resultados.extend(sub.resultados)
+                metodos_usados.add("balanco")
+                continue
             else:
                 continue
             relatorio.entradas.append(r.atividade)
             relatorio.resultados.append(r)
+            metodos_usados.add("atividade")
         except (KeyError, ValueError):
             continue
 
+    if metodos_usados == {"balanco"}:
+        relatorio.metodo = "balanco"
+    elif metodos_usados == {"atividade"}:
+        relatorio.metodo = "atividade"
+    elif metodos_usados:
+        relatorio.metodo = "misto"
+
     return relatorio
 
+
+# ── Listagens para a UI ──────────────────────────────────────────────────────
 
 def listar_combustiveis() -> list[str]:
     return sorted(FATORES_COMBUSTIVEIS.keys())
@@ -313,3 +570,8 @@ def listar_refrigerantes() -> list[str]:
 
 def listar_setores_cadeia() -> list[str]:
     return sorted(FATORES_CADEIA_FORNECIMENTO.keys())
+
+
+def listar_categorias_setoriais() -> list[tuple[str, str]]:
+    """Retorna [(chave, rótulo)] das categorias disponíveis para o modo balanço."""
+    return sorted(((k, v["rotulo"]) for k, v in PERFIS_SETORIAIS.items()), key=lambda x: x[1])
