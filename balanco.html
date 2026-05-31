@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Inventário por Balanço — CarbonFree 15.042</title>
+<style>
+  :root{--dark:#152417;--green:#8cbd41;--olive:#b0a94e;--lime:#d4e9a8;}
+  *{box-sizing:border-box;}
+  body{font-family:system-ui,"Segoe UI",Roboto,sans-serif;background:#f5f5f1;color:#1f2937;margin:0;padding:24px;}
+  .wrap{max-width:920px;margin:0 auto;}
+  h1{font-size:1.6rem;color:var(--dark);margin:0 0 4px;}
+  .sub{color:#6b7280;font-size:.92rem;margin-bottom:20px;}
+  .card{background:#fff;border:1px solid #e5e3d8;border-radius:14px;padding:20px;margin-bottom:18px;}
+  .row{display:flex;flex-wrap:wrap;gap:14px;}
+  .field{flex:1 1 200px;}
+  label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5b6b5e;margin-bottom:5px;}
+  input,select{width:100%;padding:.55rem .7rem;border:1px solid #d6d3c0;border-radius:8px;font-size:.9rem;background:#fff;}
+  input:focus,select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(140,189,65,.18);}
+  button{cursor:pointer;border:none;border-radius:8px;font-weight:600;font-size:.9rem;padding:.6rem 1.1rem;}
+  .btn-primary{background:var(--dark);color:#fff;}
+  .btn-accent{background:var(--green);color:var(--dark);font-weight:700;}
+  .btn-sec{background:#fff;border:1px solid #d6d3c0;color:var(--dark);}
+  .muted{font-size:.8rem;color:#6b7280;}
+  .res{background:var(--dark);color:#fff;border-radius:12px;padding:18px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  .res .lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--olive);}
+  .res .val{font-family:ui-monospace,monospace;font-size:1.1rem;}
+  .res .val.big{color:var(--green);font-weight:700;}
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-size:.85rem;}
+  th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid #ecebe0;vertical-align:top;}
+  th{font-size:.7rem;text-transform:uppercase;color:#5b6b5e;background:#faf9f3;}
+  .badge{display:inline-block;padding:.25rem .6rem;border-radius:999px;font-size:.72rem;font-weight:700;}
+  .b-isento{background:#dcfce7;color:#15803d;}
+  .b-monit{background:#fef3c7;color:#b45309;}
+  .b-obrig{background:#fee2e2;color:#b91c1c;}
+  .msg{padding:.6rem .8rem;border-radius:8px;font-size:.85rem;margin-top:10px;display:none;}
+  .msg.show{display:block;}
+  .msg.err{background:#fee2e2;color:#991b1b;}
+  .msg.ok{background:#dcfce7;color:#166534;}
+  .hint{font-size:.78rem;color:#7a751b;background:#faf7e8;border:1px solid #e7e0c0;border-radius:8px;padding:.6rem .8rem;margin-top:8px;}
+  details{margin-bottom:18px;}
+  summary{cursor:pointer;font-size:.82rem;color:#6b7280;}
+  .topo{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;}
+  a.voltar{font-size:.82rem;color:#6b7280;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topo">
+    <div>
+      <h1>Inventário por Balanço</h1>
+      <div class="sub">Estima Escopos 1, 2 e 3 a partir da categoria econômica e do balanço declarado (método spend-based / EEIO). Lei 15.042/2024.</div>
+    </div>
+    <a class="voltar" href="/">← Painel</a>
+  </div>
+
+  <details>
+    <summary>Configuração da API (token)</summary>
+    <div class="card" style="margin-top:8px;">
+      <div class="row">
+        <div class="field"><label>Base URL</label><input id="cfg-url" placeholder="http://localhost:8000"/></div>
+        <div class="field"><label>Token JWT</label><input id="cfg-token" placeholder="eyJ..."/></div>
+      </div>
+      <div class="muted" style="margin-top:8px;">Se você já fez login no painel principal neste navegador, esses campos são preenchidos sozinhos. Senão, faça login no painel e recarregue esta página.</div>
+    </div>
+  </details>
+
+  <div class="card">
+    <div class="row">
+      <div class="field" style="flex:2 1 280px;">
+        <label>CNPJ (preenche a categoria automaticamente)</label>
+        <div style="display:flex;gap:8px;">
+          <input id="cnpj" placeholder="00.000.000/0001-00"/>
+          <button class="btn-sec" onclick="consultarCNPJ()">Consultar</button>
+        </div>
+      </div>
+      <div class="field"><label>Empresa / Razão social</label><input id="empresa"/></div>
+    </div>
+    <div class="row" style="margin-top:14px;">
+      <div class="field"><label>Categoria econômica</label><select id="categoria"></select></div>
+      <div class="field"><label>Ano de referência</label><input id="ano" type="number" value="2026"/></div>
+    </div>
+    <div id="cnpj-info" class="hint" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field"><label>Faturamento bruto anual (R$) *</label><input id="faturamento" type="number" placeholder="0"/></div>
+    </div>
+    <div class="muted" style="margin:12px 0 4px;">Refinamentos opcionais — se preenchidos, substituem a estimativa por faturamento do escopo correspondente:</div>
+    <div class="row">
+      <div class="field"><label>Gasto combustível (R$) → E1</label><input id="g_comb" type="number" placeholder="0"/></div>
+      <div class="field"><label>Gasto energia (R$) → E2</label><input id="g_ener" type="number" placeholder="0"/></div>
+      <div class="field"><label>Compras insumos (R$) → E3</label><input id="compras" type="number" placeholder="0"/></div>
+    </div>
+    <div class="row" style="margin-top:14px;">
+      <div class="field"><label>CBE disponíveis (tCO₂e)</label><input id="cbe" type="number" value="0"/></div>
+      <div class="field"><label>CRVE disponíveis (tCO₂e)</label><input id="crve" type="number" value="0"/></div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="calcular()">Calcular</button>
+      <button class="btn-accent" id="btn-salvar" onclick="salvar()" style="display:none;">Salvar como inventário</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <div class="card" id="result-card" style="display:none;">
+    <div class="res">
+      <div><div class="lbl">Escopo 1</div><div class="val" id="r-e1">0</div></div>
+      <div><div class="lbl">Escopo 2</div><div class="val" id="r-e2">0</div></div>
+      <div><div class="lbl">Escopo 3</div><div class="val" id="r-e3">0</div></div>
+      <div><div class="lbl">Total tCO₂e</div><div class="val big" id="r-total">0</div></div>
+      <div><div class="lbl">Status SBCE</div><div id="r-status">—</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Escopo</th><th>tCO₂e</th><th>Fator</th><th>Base do cálculo</th></tr></thead>
+      <tbody id="r-detalhes"></tbody>
+    </table>
+    <div class="hint">Método de triagem (spend-based). Para empresas acima de 25.000 tCO₂e/ano, refine os Escopos 1 e 2 com dado de atividade (litros, kWh) no Motor IA antes de arquivar.</div>
+  </div>
+</div>
+
+<script>
+const CFG_KEY = 'cf15042_config';
+let ultimo = null; // guarda os campos do último cálculo, para salvar
+
+function cfg(){
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+  const token = document.getElementById('cfg-token').value.trim();
+  return { url, token };
+}
+function loadCfg(){
+  try{
+    const raw = localStorage.getItem(CFG_KEY);
+    if (raw){
+      const c = JSON.parse(raw);
+      document.getElementById('cfg-url').value = c.apiUrl || location.origin;
+      document.getElementById('cfg-token').value = c.token || '';
+    } else {
+      document.getElementById('cfg-url').value = location.origin;
+    }
+  } catch(e){ document.getElementById('cfg-url').value = location.origin; }
+}
+async function api(path, opts = {}){
+  const { url, token } = cfg();
+  if (!url) throw new Error('Configure a Base URL.');
+  const headers = Object.assign(
+    { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+    opts.headers || {}
+  );
+  const r = await fetch(url + path, { ...opts, headers });
+  if (!r.ok){
+    let d = '';
+    try { d = (await r.json()).detail || ''; } catch {}
+    throw new Error(r.status + (d ? ' — ' + d : ''));
+  }
+  return r.json();
+}
+function fmt(n, d = 4){ return Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function showMsg(t, k){ const e = document.getElementById('msg'); e.textContent = t; e.className = 'msg show ' + k; }
+function statusDe(total){
+  if (total < 10000) return ['ISENTO', 'b-isento'];
+  if (total <= 25000) return ['MONITORAMENTO OBRIGATÓRIO', 'b-monit'];
+  return ['CONFORMIDADE TOTAL OBRIGATÓRIA', 'b-obrig'];
+}
+
+async function carregarCategorias(){
+  try{
+    const cats = await api('/api/v1/emissoes/categorias');
+    const sel = document.getElementById('categoria');
+    sel.innerHTML = '<option value="">Selecione…</option>' +
+      cats.map(c => `<option value="${c.chave}">${c.rotulo}</option>`).join('');
+  } catch(e){
+    showMsg('Não consegui carregar as categorias: ' + e.message +
+            ' — verifique o token e se o servidor foi reiniciado.', 'err');
+  }
+}
+
+async function consultarCNPJ(){
+  const cnpj = document.getElementById('cnpj').value.trim();
+  if (!cnpj){ showMsg('Informe um CNPJ.', 'err'); return; }
+  showMsg('Consultando CNPJ…', 'ok');
+  try{
+    const d = await api('/api/v1/emissoes/cnpj/' + encodeURIComponent(cnpj.replace(/\D/g, '')));
+    if (d.razao_social) document.getElementById('empresa').value = d.razao_social;
+    if (d.categoria_sugerida) document.getElementById('categoria').value = d.categoria_sugerida;
+    const info = document.getElementById('cnpj-info');
+    info.style.display = 'block';
+    info.innerHTML =
+      `CNAE ${d.cnae_fiscal || '—'} · ${d.cnae_descricao || ''}<br>` +
+      (d.categoria_sugerida
+        ? `Categoria sugerida: <b>${d.categoria_rotulo || d.categoria_sugerida}</b>`
+        : 'CNAE sem mapeamento automático — escolha a categoria manualmente.') +
+      (d.porte ? ` · Porte: ${d.porte}` : '') +
+      (d.capital_social != null ? ` · Capital social: R$ ${fmt(d.capital_social, 2)}` : '');
+    showMsg('CNPJ consultado. Confira a categoria sugerida.', 'ok');
+  } catch(e){ showMsg('Erro ao consultar CNPJ: ' + e.message, 'err'); }
+}
+
+async function calcular(){
+  const payload = {
+    empresa: document.getElementById('empresa').value.trim() || 'Empresa',
+    cnpj_cpf: document.getElementById('cnpj').value.trim(),
+    ano_referencia: parseInt(document.getElementById('ano').value) || 2026,
+    categoria: document.getElementById('categoria').value,
+    faturamento_bruto: parseFloat(document.getElementById('faturamento').value) || 0,
+    gasto_combustivel: parseFloat(document.getElementById('g_comb').value) || 0,
+    gasto_energia_eletrica: parseFloat(document.getElementById('g_ener').value) || 0,
+    compras_insumos: parseFloat(document.getElementById('compras').value) || 0,
+  };
+  if (!payload.categoria){ showMsg('Selecione a categoria.', 'err'); return; }
+  if (payload.faturamento_bruto <= 0){ showMsg('Informe o faturamento bruto.', 'err'); return; }
+  showMsg('Calculando…', 'ok');
+  try{
+    const r = await api('/api/v1/emissoes/calcular-balanco', { method: 'POST', body: JSON.stringify(payload) });
+    ultimo = {
+      ...r.campos_emissao,
+      empresa: payload.empresa,
+      cnpj_cpf: payload.cnpj_cpf,
+      ano_referencia: payload.ano_referencia,
+      cbe_disponiveis: parseFloat(document.getElementById('cbe').value) || 0,
+      crve_disponiveis: parseFloat(document.getElementById('crve').value) || 0,
+    };
+    document.getElementById('r-e1').textContent = fmt(r.escopo1_total);
+    document.getElementById('r-e2').textContent = fmt(r.escopo2_total);
+    document.getElementById('r-e3').textContent = fmt(r.escopo3_total);
+    document.getElementById('r-total').textContent = fmt(r.total_tco2e);
+    const [st, cls] = statusDe(r.total_tco2e);
+    document.getElementById('r-status').innerHTML = `<span class="badge ${cls}">${st}</span>`;
+    document.getElementById('r-detalhes').innerHTML = r.detalhes.map(d =>
+      `<tr><td>Escopo ${d.escopo}</td><td>${fmt(d.tco2e)}</td>` +
+      `<td>${d.fator} <span class="muted">${d.unidade_fator}</span></td>` +
+      `<td class="muted">${d.nota}</td></tr>`).join('');
+    document.getElementById('result-card').style.display = 'block';
+    document.getElementById('btn-salvar').style.display = 'inline-block';
+    showMsg('Cálculo concluído.', 'ok');
+  } catch(e){ showMsg('Erro no cálculo: ' + e.message, 'err'); }
+}
+
+async function salvar(){
+  if (!ultimo){ showMsg('Calcule primeiro.', 'err'); return; }
+  showMsg('Salvando inventário…', 'ok');
+  try{
+    const r = await api('/api/v1/emissoes/', { method: 'POST', body: JSON.stringify(ultimo) });
+    showMsg(`Inventário salvo · ID ${r.id} · ${r.status_conformidade}`, 'ok');
+  } catch(e){ showMsg('Erro ao salvar: ' + e.message, 'err'); }
+}
+
+loadCfg();
+carregarCategorias();
+</script>
+</body>
+</html>
