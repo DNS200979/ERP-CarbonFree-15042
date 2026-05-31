@@ -1,10 +1,6 @@
 """
 Módulo 2 — Motor de IA para cálculo preciso de emissões de carbono.
 
-Utiliza fatores de emissão do IPCC AR6, GHG Protocol Brasil e MCTI
-para converter"""
-Módulo 2 — Motor de IA para cálculo preciso de emissões de carbono.
-
 Dois modos de cálculo, complementares:
 
   1. POR ATIVIDADE (preexistente): consumo físico (litros, kWh, km, kg) →
