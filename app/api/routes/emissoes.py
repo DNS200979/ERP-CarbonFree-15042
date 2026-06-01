@@ -4,9 +4,11 @@ Compatível com integração SAP/TOTVS — aceita payload padrão GHG Protocol.
 """
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from pydantic import BaseModel, Field
 
+from app.services.ecf import parse_ecf
+from app.services.cnpj import consultar_cnpj
 from app.api.auth import usuario_autenticado
 from app.database.client import get_db_client
 from app.services.motor_ia import (
@@ -196,6 +198,113 @@ def calcular_balanco(
 
 @router.post("/", status_code=status.HTTP_201_CREATED,
              summary="Registrar inventário de emissões")
+@router.post("/importar-ecf", summary="Importar ECF (imposto de renda/SPED) e calcular por balanço")
+async def importar_ecf(
+    arquivo: UploadFile = File(..., description="Arquivo .txt da ECF transmitida à Receita"),
+    calcular: bool = Query(True, description="Se True, já devolve o inventário calculado"),
+    usuario: dict = Depends(usuario_autenticado),
+):
+  """
+    Lê o arquivo da ECF (Escrituração Contábil Fiscal — o SPED que substituiu a
+    DIPJ na entrega do imposto de renda da pessoa jurídica) e extrai, sem
+    digitação manual:
+ 
+      • CNPJ e razão social
+      • período / ano de referência e regime (Lucro Real ou Presumido)
+      • receita bruta (base do cálculo por balanço)
+      • gastos com energia e combustível (refinam Escopos 2 e 1, quando presentes)
+ 
+    Em seguida consulta o CNAE pelo CNPJ (BrasilAPI) e sugere a categoria
+    setorial. Se `calcular=True` e houver categoria + receita, já devolve o
+    inventário estimado (mesmo formato de /calcular-balanco).
+ 
+    Nada é gravado: o usuário confere os valores e usa POST /emissoes/ para salvar.
+    """
+    # 1) Ler e parsear a ECF
+    try:
+        conteudo = await arquivo.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Não foi possível ler o arquivo: {e}")
+ 
+    dados = parse_ecf(conteudo)
+    if not dados.cnpj and dados.receita_bruta <= 0 and not dados.dre:
+        raise HTTPException(
+            status_code=422,
+            detail="Arquivo não reconhecido como ECF (nenhum registro 0000/L300/P150 encontrado). "
+                   "Confirme que é o .txt da ECF transmitida ao SPED.",
+        )
+ 
+    # 2) Consultar CNAE pelo CNPJ → sugerir categoria (falha graciosa)
+    cnpj_info: dict = {}
+    categoria_sugerida = None
+    if dados.cnpj:
+        try:
+            cnpj_info = consultar_cnpj(dados.cnpj)
+            categoria_sugerida = cnpj_info.get("categoria_sugerida")
+            if categoria_sugerida:
+                for chave, rot in listar_categorias_setoriais():
+                    if chave == categoria_sugerida:
+                        cnpj_info["categoria_rotulo"] = rot
+                        break
+        except ValueError as e:
+            # CNPJ inválido / não encontrado / rede indisponível — não bloqueia
+            cnpj_info = {"erro": str(e)}
+ 
+    # 3) Calcular por balanço (opcional)
+    calculo = None
+    aviso_calculo = None
+    if calcular:
+        if not categoria_sugerida:
+            aviso_calculo = (
+                "CNAE sem mapeamento automático para categoria — selecione a "
+                "categoria manualmente e clique em Calcular."
+            )
+        elif dados.receita_bruta <= 0:
+            aviso_calculo = (
+                "Receita bruta não localizada na ECF — informe o faturamento "
+                "manualmente e clique em Calcular."
+            )
+        else:
+            decl = DeclaracaoEmpresa(
+                empresa=dados.razao_social or "Empresa",
+                categoria=categoria_sugerida,
+                ano_referencia=dados.ano_referencia or 0,
+                cnpj_cpf=dados.cnpj,
+                faturamento_bruto=dados.receita_bruta,
+                gasto_combustivel=dados.gasto_combustivel,
+                gasto_energia_eletrica=dados.gasto_energia_eletrica,
+                compras_insumos=0.0,
+            )
+            relatorio = calcular_por_balanco(decl)
+            calculo = {
+                "metodo": relatorio.metodo,
+                "categoria": relatorio.categoria,
+                "escopo1_total": relatorio.escopo1_total,
+                "escopo2_total": relatorio.escopo2_total,
+                "escopo3_total": relatorio.escopo3_total,
+                "total_tco2e": relatorio.total_tco2e,
+                "campos_emissao": relatorio.para_emissao_dict(),
+                "detalhes": [
+                    {
+                        "escopo": r.atividade.escopo,
+                        "tco2e": r.tco2e,
+                        "fator": r.fator_utilizado,
+                        "unidade_fator": r.unidade_fator,
+                        "nota": r.nota,
+                    }
+                    for r in relatorio.resultados
+                ],
+            }
+ 
+    return {
+        "arquivo": arquivo.filename,
+        "ecf": dados.resumo(),
+        "cnpj_info": cnpj_info,
+        "categoria_sugerida": categoria_sugerida,
+        "calculo": calculo,
+        "aviso_calculo": aviso_calculo,
+    }
+   
 def registrar_emissao(
     dados: EmissaoEntrada,
     usuario: dict = Depends(usuario_autenticado),
