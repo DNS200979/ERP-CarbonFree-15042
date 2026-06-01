@@ -132,14 +132,30 @@ def _parse_0000(campos: list[str], dados: DadosECF) -> None:
         if re.fullmatch(r"\d{14}", v):
             dados.cnpj = v
             break
-    # Razão social = campo imediatamente após o CNPJ
+    # Razão social: campo de texto adjacente ao CNPJ. O leiaute da ECF varia —
+    # em algumas versões o nome vem ANTES do CNPJ (|...|NOME|CNPJ|UF|...) e em
+    # outras DEPOIS. Pegamos o vizinho (anterior ou posterior) que pareça um
+    # nome: tem letras, não é data de 8 dígitos e tem mais de 2 caracteres
+    # (descarta a sigla da UF, ex.: "SC"). Em empate, o mais longo.
     if dados.cnpj:
         try:
             i = valores.index(dados.cnpj)
-            if i + 1 < len(valores) and valores[i + 1]:
-                dados.razao_social = valores[i + 1]
         except ValueError:
-            pass
+            i = -1
+        if i >= 0:
+            vizinhos = []
+            if i - 1 >= 0:
+                vizinhos.append(valores[i - 1])
+            if i + 1 < len(valores):
+                vizinhos.append(valores[i + 1])
+            candidatos_nome = [
+                c for c in vizinhos
+                if c and len(c) > 2
+                and re.search(r"[A-Za-zÀ-ÿ]", c)
+                and not re.fullmatch(r"\d{8}", c)
+            ]
+            if candidatos_nome:
+                dados.razao_social = max(candidatos_nome, key=len)
     # Datas ddmmaaaa válidas -> menor = início, maior = fim, ano = do fim
     datas = []
     for v in valores:
