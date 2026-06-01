@@ -42,6 +42,11 @@
   summary{cursor:pointer;font-size:.82rem;color:#6b7280;}
   .topo{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;}
   a.voltar{font-size:.82rem;color:#6b7280;text-decoration:none;}
+  .ecf-card{background:linear-gradient(135deg,#152417 0%,#1e3321 100%);border:1px solid #2c4630;color:#fff;}
+  .ecf-card label{color:var(--lime);}
+  .ecf-card .muted{color:#b8c4ab;}
+  .ecf-drop{border:1.5px dashed #4a6b4e;border-radius:10px;padding:.7rem;background:rgba(140,189,65,.06);}
+  input[type=file]{padding:.45rem;background:rgba(255,255,255,.04);color:#e8efe0;border-color:#4a6b4e;}
 </style>
 </head>
 <body>
@@ -65,10 +70,31 @@
     </div>
   </details>
 
+  <!-- ====== NOVO: Importar ECF (imposto de renda / SPED) ====== -->
+  <div class="card ecf-card">
+    <div class="row">
+      <div class="field" style="flex:1 1 100%;">
+        <label>① Importar ECF — arquivo do imposto de renda (SPED) enviado à Receita</label>
+        <div class="ecf-drop">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="file" id="ecf-file" accept=".txt,.ecf" style="flex:1 1 260px;"/>
+            <button class="btn-accent" onclick="importarECF()">Ler ECF e preencher tudo</button>
+          </div>
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          Lê <b>CNPJ</b>, período, <b>receita bruta</b> e, quando disponíveis, <b>gastos com energia e combustível</b> direto da DRE.
+          Consulta o CNAE pelo CNPJ e sugere a <b>categoria</b> automaticamente. Aceita o <code>.txt</code> da ECF (Lucro Real ou Presumido).
+          Empresas do Simples (sem ECF) devem preencher manualmente abaixo.
+        </div>
+      </div>
+    </div>
+    <div id="ecf-info" class="hint" style="display:none;"></div>
+  </div>
+
   <div class="card">
     <div class="row">
       <div class="field" style="flex:2 1 280px;">
-        <label>CNPJ (preenche a categoria automaticamente)</label>
+        <label>② CNPJ (preenche a categoria automaticamente)</label>
         <div style="display:flex;gap:8px;">
           <input id="cnpj" placeholder="00.000.000/0001-00"/>
           <button class="btn-sec" onclick="consultarCNPJ()">Consultar</button>
@@ -164,6 +190,22 @@ function statusDe(total){
   return ['CONFORMIDADE TOTAL OBRIGATÓRIA', 'b-obrig'];
 }
 
+// Renderiza o resultado do balanço (compartilhado por calcular() e importarECF())
+function renderResultado(r){
+  document.getElementById('r-e1').textContent = fmt(r.escopo1_total);
+  document.getElementById('r-e2').textContent = fmt(r.escopo2_total);
+  document.getElementById('r-e3').textContent = fmt(r.escopo3_total);
+  document.getElementById('r-total').textContent = fmt(r.total_tco2e);
+  const [st, cls] = statusDe(r.total_tco2e);
+  document.getElementById('r-status').innerHTML = `<span class="badge ${cls}">${st}</span>`;
+  document.getElementById('r-detalhes').innerHTML = (r.detalhes || []).map(d =>
+    `<tr><td>Escopo ${d.escopo}</td><td>${fmt(d.tco2e)}</td>` +
+    `<td>${d.fator} <span class="muted">${d.unidade_fator}</span></td>` +
+    `<td class="muted">${d.nota}</td></tr>`).join('');
+  document.getElementById('result-card').style.display = 'block';
+  document.getElementById('btn-salvar').style.display = 'inline-block';
+}
+
 async function carregarCategorias(){
   try{
     const cats = await api('/api/v1/emissoes/categorias');
@@ -197,6 +239,71 @@ async function consultarCNPJ(){
   } catch(e){ showMsg('Erro ao consultar CNPJ: ' + e.message, 'err'); }
 }
 
+// ====== NOVO: importar ECF (multipart) e preencher o formulário ======
+async function importarECF(){
+  const input = document.getElementById('ecf-file');
+  const file = input.files && input.files[0];
+  if (!file){ showMsg('Selecione o arquivo .txt da ECF.', 'err'); return; }
+  const { url, token } = cfg();
+  if (!url){ showMsg('Configure a Base URL.', 'err'); return; }
+  showMsg('Lendo a ECF, consultando o CNPJ e calculando…', 'ok');
+  try{
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    const r = await fetch(url + '/api/v1/emissoes/importar-ecf?calcular=true', {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: fd,
+    });
+    if (!r.ok){
+      let d = ''; try { d = (await r.json()).detail || ''; } catch {}
+      throw new Error(r.status + (d ? ' — ' + d : ''));
+    }
+    aplicarECF(await r.json());
+  } catch(e){ showMsg('Erro ao importar ECF: ' + e.message, 'err'); }
+}
+
+function aplicarECF(data){
+  const ecf = data.ecf || {};
+  if (ecf.razao_social)           document.getElementById('empresa').value     = ecf.razao_social;
+  if (ecf.cnpj)                   document.getElementById('cnpj').value        = ecf.cnpj;
+  if (ecf.ano_referencia)         document.getElementById('ano').value         = ecf.ano_referencia;
+  if (ecf.receita_bruta)          document.getElementById('faturamento').value = ecf.receita_bruta;
+  if (ecf.gasto_energia_eletrica) document.getElementById('g_ener').value      = ecf.gasto_energia_eletrica;
+  if (ecf.gasto_combustivel)      document.getElementById('g_comb').value      = ecf.gasto_combustivel;
+  if (data.categoria_sugerida)    document.getElementById('categoria').value   = data.categoria_sugerida;
+
+  const ci = data.cnpj_info || {};
+  const info = document.getElementById('ecf-info');
+  info.style.display = 'block';
+  info.innerHTML =
+    `ECF lida · CNPJ ${ecf.cnpj || '—'} · período ${ecf.periodo || '—'} · regime <b>${ecf.regime || '—'}</b><br>` +
+    `Receita bruta: <b>R$ ${fmt(ecf.receita_bruta, 2)}</b>` +
+    (ecf.gasto_energia_eletrica ? ` · Energia: R$ ${fmt(ecf.gasto_energia_eletrica, 2)}` : '') +
+    (ecf.gasto_combustivel ? ` · Combustível: R$ ${fmt(ecf.gasto_combustivel, 2)}` : '') +
+    (data.categoria_sugerida
+      ? `<br>Categoria (CNAE ${ci.cnae_fiscal || '—'}): <b>${ci.categoria_rotulo || data.categoria_sugerida}</b>`
+      : '<br>CNAE sem mapeamento automático — selecione a categoria manualmente.') +
+    ((ecf.avisos && ecf.avisos.length) ? `<br><span style="color:#fbbf24">⚠ ${ecf.avisos.join(' · ')}</span>` : '');
+
+  if (data.calculo){
+    const r = data.calculo;
+    ultimo = {
+      ...r.campos_emissao,
+      empresa: ecf.razao_social || 'Empresa',
+      cnpj_cpf: ecf.cnpj || '',
+      ano_referencia: ecf.ano_referencia || 2026,
+      cbe_disponiveis: parseFloat(document.getElementById('cbe').value) || 0,
+      crve_disponiveis: parseFloat(document.getElementById('crve').value) || 0,
+    };
+    renderResultado(r);
+    showMsg('ECF importada e inventário calculado. Revise e clique em "Salvar como inventário".', 'ok');
+  } else {
+    const aviso = data.aviso_calculo ? ' ' + data.aviso_calculo : '';
+    showMsg('ECF importada.' + aviso + ' Confira os campos e clique em Calcular.', 'ok');
+  }
+}
+
 async function calcular(){
   const payload = {
     empresa: document.getElementById('empresa').value.trim() || 'Empresa',
@@ -221,18 +328,7 @@ async function calcular(){
       cbe_disponiveis: parseFloat(document.getElementById('cbe').value) || 0,
       crve_disponiveis: parseFloat(document.getElementById('crve').value) || 0,
     };
-    document.getElementById('r-e1').textContent = fmt(r.escopo1_total);
-    document.getElementById('r-e2').textContent = fmt(r.escopo2_total);
-    document.getElementById('r-e3').textContent = fmt(r.escopo3_total);
-    document.getElementById('r-total').textContent = fmt(r.total_tco2e);
-    const [st, cls] = statusDe(r.total_tco2e);
-    document.getElementById('r-status').innerHTML = `<span class="badge ${cls}">${st}</span>`;
-    document.getElementById('r-detalhes').innerHTML = r.detalhes.map(d =>
-      `<tr><td>Escopo ${d.escopo}</td><td>${fmt(d.tco2e)}</td>` +
-      `<td>${d.fator} <span class="muted">${d.unidade_fator}</span></td>` +
-      `<td class="muted">${d.nota}</td></tr>`).join('');
-    document.getElementById('result-card').style.display = 'block';
-    document.getElementById('btn-salvar').style.display = 'inline-block';
+    renderResultado(r);
     showMsg('Cálculo concluído.', 'ok');
   } catch(e){ showMsg('Erro no cálculo: ' + e.message, 'err'); }
 }
