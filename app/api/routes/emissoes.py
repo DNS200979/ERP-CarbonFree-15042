@@ -6,9 +6,9 @@ Compatível com integração SAP/TOTVS — aceita payload padrão GHG Protocol.
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from pydantic import BaseModel, Field
-
 from app.services.ecf import parse_ecf
-from app.services.cnpj import consultar_cnpj
+from app.services.cnpj import consultar_cnpj, cnae_para_categoria
+
 from app.api.auth import usuario_autenticado
 from app.database.client import get_db_client
 from app.services.motor_ia import (
