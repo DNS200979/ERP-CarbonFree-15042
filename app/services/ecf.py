@@ -77,6 +77,7 @@ class LinhaDRE:
 class DadosECF:
     cnpj: str = ""
     razao_social: str = ""
+    cnae: str = ""                # CNAE principal lido do registro 0020 (quando presente)
     dt_inicial: str = ""          # ddmmaaaa
     dt_final: str = ""            # ddmmaaaa
     ano_referencia: int = 0
@@ -97,6 +98,7 @@ class DadosECF:
         return {
             "cnpj": self.cnpj,
             "razao_social": self.razao_social,
+            "cnae": self.cnae,
             "ano_referencia": self.ano_referencia,
             "periodo": self.periodo,
             "regime": self.regime,
@@ -221,6 +223,23 @@ def _consolidar_receita(dados: DadosECF, candidatos: list) -> None:
 
 # -- ponto de entrada ---------------------------------------------------------
 
+def _parse_0020(campos: list[str], dados: DadosECF) -> None:
+    """Lê o CNAE principal do registro 0020 (Parâmetros Complementares).
+
+    Atenção: tanto o CNAE quanto o código de município do IBGE têm 7 dígitos.
+    O município fica no registro 0000; por isso o CNAE é lido SOMENTE do 0020,
+    evitando confusão. Pegamos o primeiro campo com exatamente 7 dígitos.
+    Heurística: o leiaute varia por ano; quando o CNAE não estiver aqui, o
+    fluxo continua usando a consulta por CNPJ (BrasilAPI) como caminho primário.
+    """
+    if dados.cnae:
+        return
+    for v in (c.strip() for c in campos[2:]):
+        if re.fullmatch(r"\d{7}", v):
+            dados.cnae = v
+            break
+
+
 def parse_ecf(conteudo) -> DadosECF:
     """Lê o conteúdo de um arquivo ECF e devolve os dados extraídos."""
     if isinstance(conteudo, (bytes, bytearray)):
@@ -247,6 +266,8 @@ def parse_ecf(conteudo) -> DadosECF:
 
         if reg == "0000":
             _parse_0000(campos, dados)
+        elif reg == "0020":
+            _parse_0020(campos, dados)
         elif reg == "L300":            # DRE do Lucro Real
             if dados.regime == "desconhecido":
                 dados.regime = "lucro_real"
