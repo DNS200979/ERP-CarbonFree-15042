@@ -1,13 +1,18 @@
 """
 Endpoints de Emissões de Carbono.
 Compatível com integração SAP/TOTVS — aceita payload padrão GHG Protocol.
+
+Inclui o endpoint POST /importar-ecf, que lê o arquivo da ECF (o SPED do
+imposto de renda da pessoa jurídica), extrai CNPJ, razão social, receita,
+gastos com energia/combustível e o CNAE (registro 0020), resolve a categoria
+setorial — primeiro pela consulta do CNPJ na BrasilAPI e, em fallback, pelo
+próprio CNAE da ECF — e devolve o inventário calculado por balanço, sem
+digitação manual. Nada é gravado: o usuário confere e usa POST /emissoes/.
 """
 
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from pydantic import BaseModel, Field
-from app.services.ecf import parse_ecf
-from app.services.cnpj import consultar_cnpj, cnae_para_categoria
 
 from app.api.auth import usuario_autenticado
 from app.database.client import get_db_client
@@ -17,6 +22,8 @@ from app.services.motor_ia import (
     DeclaracaoEmpresa,
     listar_categorias_setoriais,
 )
+from app.services.ecf import parse_ecf
+from app.services.cnpj import consultar_cnpj, cnae_para_categoria
 
 router = APIRouter()
 
@@ -131,7 +138,6 @@ def consultar_cnpj_endpoint(cnpj: str, usuario: dict = Depends(usuario_autentica
     NÃO retorna faturamento — esse dado não é público; deve ser informado
     pelo usuário (ou obtido via CVM, para companhias abertas).
     """
-    from app.services.cnpj import consultar_cnpj
     try:
         dados = consultar_cnpj(cnpj)
     except ValueError as e:
@@ -196,28 +202,32 @@ def calcular_balanco(
     }
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED,
-             summary="Registrar inventário de emissões")
 @router.post("/importar-ecf", summary="Importar ECF (imposto de renda/SPED) e calcular por balanço")
 async def importar_ecf(
     arquivo: UploadFile = File(..., description="Arquivo .txt da ECF transmitida à Receita"),
     calcular: bool = Query(True, description="Se True, já devolve o inventário calculado"),
     usuario: dict = Depends(usuario_autenticado),
 ):
-  """
+    """
     Lê o arquivo da ECF (Escrituração Contábil Fiscal — o SPED que substituiu a
     DIPJ na entrega do imposto de renda da pessoa jurídica) e extrai, sem
     digitação manual:
- 
+
       • CNPJ e razão social
+      • CNAE principal (registro 0020), quando presente
       • período / ano de referência e regime (Lucro Real ou Presumido)
       • receita bruta (base do cálculo por balanço)
       • gastos com energia e combustível (refinam Escopos 2 e 1, quando presentes)
- 
-    Em seguida consulta o CNAE pelo CNPJ (BrasilAPI) e sugere a categoria
-    setorial. Se `calcular=True` e houver categoria + receita, já devolve o
-    inventário estimado (mesmo formato de /calcular-balanco).
- 
+
+    A categoria setorial é resolvida nesta ordem:
+      1) consulta do CNAE pelo CNPJ (BrasilAPI) — caminho primário p/ CNPJ real;
+      2) se a consulta falhar (ex.: CNPJ fictício, offline), usa o CNAE lido da
+         própria ECF (registro 0020) como fallback.
+    Isso permite testar o fluxo completo com CNPJs fictícios.
+
+    Se `calcular=True` e houver categoria + receita, já devolve o inventário
+    estimado (mesmo formato de /calcular-balanco).
+
     Nada é gravado: o usuário confere os valores e usa POST /emissoes/ para salvar.
     """
     # 1) Ler e parsear a ECF
@@ -225,7 +235,7 @@ async def importar_ecf(
         conteudo = await arquivo.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Não foi possível ler o arquivo: {e}")
- 
+
     dados = parse_ecf(conteudo)
     if not dados.cnpj and dados.receita_bruta <= 0 and not dados.dre:
         raise HTTPException(
@@ -233,7 +243,7 @@ async def importar_ecf(
             detail="Arquivo não reconhecido como ECF (nenhum registro 0000/L300/P150 encontrado). "
                    "Confirme que é o .txt da ECF transmitida ao SPED.",
         )
- 
+
     # 2) Consultar CNAE pelo CNPJ → sugerir categoria (falha graciosa)
     cnpj_info: dict = {}
     categoria_sugerida = None
@@ -246,10 +256,29 @@ async def importar_ecf(
                     if chave == categoria_sugerida:
                         cnpj_info["categoria_rotulo"] = rot
                         break
-        except ValueError as e:
+        except Exception as e:
             # CNPJ inválido / não encontrado / rede indisponível — não bloqueia
             cnpj_info = {"erro": str(e)}
- 
+
+    # 2b) Fallback: usar o CNAE lido da própria ECF (registro 0020) quando a
+    #     consulta por CNPJ não resolveu a categoria. Viabiliza testes com
+    #     CNPJ fictício e funcionamento offline.
+    if not categoria_sugerida and getattr(dados, "cnae", ""):
+        categoria_ecf = cnae_para_categoria(dados.cnae)
+        if categoria_ecf:
+            categoria_sugerida = categoria_ecf
+            rotulo = ""
+            for chave, rot in listar_categorias_setoriais():
+                if chave == categoria_ecf:
+                    rotulo = rot
+                    break
+            cnpj_info = {
+                "cnae_fiscal": dados.cnae,
+                "categoria_sugerida": categoria_ecf,
+                "categoria_rotulo": rotulo,
+                "origem_categoria": "CNAE da própria ECF (registro 0020)",
+            }
+
     # 3) Calcular por balanço (opcional)
     calculo = None
     aviso_calculo = None
@@ -295,7 +324,7 @@ async def importar_ecf(
                     for r in relatorio.resultados
                 ],
             }
- 
+
     return {
         "arquivo": arquivo.filename,
         "ecf": dados.resumo(),
@@ -304,7 +333,10 @@ async def importar_ecf(
         "calculo": calculo,
         "aviso_calculo": aviso_calculo,
     }
-   
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED,
+             summary="Registrar inventário de emissões")
 def registrar_emissao(
     dados: EmissaoEntrada,
     usuario: dict = Depends(usuario_autenticado),
