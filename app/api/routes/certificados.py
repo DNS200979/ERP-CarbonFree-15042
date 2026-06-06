@@ -8,6 +8,7 @@ from typing import Optional
 
 from app.api.auth import usuario_autenticado
 from app.database.client import get_db_client
+from app.services.orgaos_ambientais import consultar_documento
 
 router = APIRouter()
 
@@ -27,6 +28,33 @@ class CertificadoEntrada(BaseModel):
                 "atividade": "Agricultura de Baixo Carbono",
             }
         }
+
+
+@router.get("/consultar-documento/{documento}",
+            summary="Consultar titular rural por CNPJ/CPF nos órgãos ambientais")
+def consultar_documento_endpoint(
+    documento: str,
+    usuario: dict = Depends(usuario_autenticado),
+):
+    """
+    Recebe um CNPJ (14 dígitos) ou CPF (11 dígitos) e orquestra as fontes
+    públicas disponíveis para autopreencher o Certificado Rural:
+
+      • Receita Federal (BrasilAPI) → razão social, CNAE, município/UF (só CNPJ);
+      • IBGE → bioma predominante inferido pela UF;
+      • CNAE → sugestão de atividade;
+      • SICAR/CAR, IBAMA, INCRA, IMA-SC → status transparente (a área preservada
+        vive no CAR e não é consultável por documento — ver campo `fontes`).
+
+    Devolve `campos_certificado` (titular, bioma, atividade, area_hectares),
+    além de `fontes` (origem/status de cada órgão) e `avisos`. Nada é gravado.
+    """
+    try:
+        return consultar_documento(documento)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Falha ao consultar órgãos: {e}")
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED,
