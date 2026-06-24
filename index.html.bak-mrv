@@ -1,0 +1,2826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ERP CarbonFree 15.042 — Movimento Brasil Verde</title>
+<meta name="description" content="ERP de conformidade com a Lei 15.042/2024 — Sistema Brasileiro de Comércio de Emissões (SBCE). Gestão de CBE, CRVE e inventário de GEE para indústria e agronegócio." />
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Chart.js para visualizações -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Lucide icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+<!-- Tipografia (Plus Jakarta Sans + Fraunces para destaques) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          'mbv-dark':    '#152417',
+          'mbv-deep':    '#0c170e',
+          'mbv-surface': '#1e3321',
+          'mbv-border':  '#2c4630',
+          'mbv-green':   '#8cbd41',
+          'mbv-olive':   '#b0a94e',
+          'mbv-cream':   '#f7f6ee',
+          'mbv-lime':    '#d4e9a8',
+          'sbce-warn':   '#d97706',
+          'sbce-danger': '#b91c1c',
+          'sbce-ok':     '#15803d',
+        },
+        fontFamily: {
+          sans:    ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          display: ['Fraunces', 'Georgia', 'serif'],
+          mono:    ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+      }
+    }
+  }
+</script>
+
+<style>
+  :root {
+    --mbv-dark: #152417;
+    --mbv-green: #8cbd41;
+    --mbv-olive: #b0a94e;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background-color: #f5f5f1;
+    color: #1f2937;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .agro-texture {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(140,189,65,0.04) 0, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(176,169,78,0.04) 0, transparent 40%),
+      linear-gradient(180deg, #f5f5f1 0%, #efefe8 100%);
+  }
+
+  .sidebar-link {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.7rem 1rem; border-radius: 0.5rem;
+    color: #d4e9a8; font-weight: 500; font-size: 0.92rem;
+    transition: all 0.2s ease; border-left: 3px solid transparent;
+    cursor: pointer;
+  }
+  .sidebar-link:hover { background: rgba(140,189,65,0.08); color: #fff; }
+  .sidebar-link.active {
+    background: rgba(140,189,65,0.15);
+    color: #fff; border-left-color: var(--mbv-green);
+  }
+  .sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+  .view { display: none; animation: fadeIn .35s ease; }
+  .view.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card {
+    background: #fff; border: 1px solid #e5e3d8; border-radius: 14px;
+    padding: 1.25rem 1.4rem; position: relative; overflow: hidden;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px -16px rgba(21,36,23,.25); }
+  .kpi-card .kpi-accent {
+    position: absolute; top: 0; right: 0; width: 90px; height: 90px;
+    background: radial-gradient(circle at top right, rgba(140,189,65,.18), transparent 70%);
+    pointer-events: none;
+  }
+
+  .field-input {
+    width: 100%; padding: 0.55rem 0.8rem;
+    border: 1px solid #d6d3c0; border-radius: 8px;
+    background: #fff; font-size: 0.9rem;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .field-input:focus {
+    outline: none; border-color: var(--mbv-green);
+    box-shadow: 0 0 0 3px rgba(140,189,65,.18);
+  }
+  .field-label {
+    display: block; font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: #5b6b5e; margin-bottom: 0.35rem;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--mbv-dark); color: #fff;
+    padding: 0.65rem 1.2rem; border-radius: 8px;
+    font-weight: 600; font-size: 0.9rem;
+    transition: background .2s ease, transform .15s ease;
+  }
+  .btn-primary:hover { background: #1e3321; transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: #fff; color: var(--mbv-dark);
+    padding: 0.6rem 1.1rem; border-radius: 8px;
+    font-weight: 600; font-size: 0.9rem;
+    border: 1px solid #d6d3c0; transition: all .2s ease;
+  }
+  .btn-secondary:hover { background: #f4f3ea; }
+  .btn-accent {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--mbv-green); color: var(--mbv-dark);
+    padding: 0.65rem 1.2rem; border-radius: 8px;
+    font-weight: 700; font-size: 0.9rem;
+    transition: background .2s ease, transform .15s ease;
+  }
+  .btn-accent:hover { background: #7eaa3a; transform: translateY(-1px); }
+
+  .badge { display: inline-flex; align-items: center; gap: .35rem;
+           padding: 0.25rem 0.65rem; border-radius: 999px;
+           font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; }
+  .badge-isento  { background: #dcfce7; color: #15803d; }
+  .badge-monit   { background: #fef3c7; color: #b45309; }
+  .badge-obrig   { background: #fee2e2; color: #b91c1c; }
+
+  #toast-area { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60;
+                display: flex; flex-direction: column; gap: 0.5rem; max-width: 360px; }
+  .toast {
+    background: var(--mbv-dark); color: #fff;
+    padding: 0.85rem 1rem; border-radius: 10px;
+    font-size: 0.88rem; box-shadow: 0 10px 30px -10px rgba(0,0,0,.3);
+    border-left: 4px solid var(--mbv-green); animation: slideIn .25s ease;
+  }
+  .toast.error   { border-left-color: #ef4444; }
+  .toast.warn    { border-left-color: #f59e0b; }
+  .toast.success { border-left-color: var(--mbv-green); }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table thead th {
+    text-align: left; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #5b6b5e; font-weight: 700;
+    padding: 0.7rem 0.9rem; border-bottom: 2px solid #e5e3d8; background: #faf9f3;
+  }
+  .data-table tbody td {
+    padding: 0.85rem 0.9rem; border-bottom: 1px solid #ecebe0; font-size: 0.88rem;
+  }
+  .data-table tbody tr:hover { background: #faf9f3; }
+
+  .conn-pill {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.3rem 0.7rem; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 600;
+    background: #f4f3ea; color: #4b5563; border: 1px solid #e5e3d8;
+  }
+  .conn-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #9ca3af; }
+  .conn-pill.online .dot { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+  .conn-pill.offline .dot { background: #ef4444; }
+
+  .section-title {
+    font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.65rem;
+    color: var(--mbv-dark); letter-spacing: -0.01em;
+  }
+  .section-subtitle { font-size: 0.92rem; color: #6b7280; margin-top: 0.25rem; }
+
+  .empty-state {
+    text-align: center; padding: 2.5rem 1rem; color: #9ca3af;
+    border: 2px dashed #e5e3d8; border-radius: 12px; background: #faf9f3;
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  @media (max-width: 1024px) {
+    #sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; z-index: 40;
+      transform: translateX(-100%); transition: transform .25s ease;
+    }
+    #sidebar.open { transform: translateX(0); }
+    #sidebar-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 30; display: none;
+    }
+    #sidebar-backdrop.open { display: block; }
+  }
+
+  #login-modal {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(12, 23, 14, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; animation: modalFade .35s ease;
+  }
+  #login-modal.hidden { display: none; }
+  @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+  .login-card {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 25px 80px -20px rgba(0,0,0,.5);
+    width: 100%; max-width: 440px; overflow: hidden;
+    animation: cardSlide .4s cubic-bezier(.2,.9,.3,1.2);
+  }
+  @keyframes cardSlide {
+    from { opacity: 0; transform: translateY(20px) scale(.96); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+  .login-header {
+    background: linear-gradient(135deg, #152417 0%, #1e3321 100%);
+    padding: 1.6rem 1.8rem 1.4rem; color: #fff; position: relative; overflow: hidden;
+  }
+  .login-header::after {
+    content: ''; position: absolute; top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(140,189,65,.25), transparent 70%);
+    pointer-events: none;
+  }
+  .login-logo {
+    width: 48px; height: 48px; border-radius: 10px; background: var(--mbv-green);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--mbv-dark); font-family: 'Fraunces', serif;
+    font-weight: 700; font-size: 1.5rem; margin-bottom: 0.9rem;
+  }
+  .login-body { padding: 1.6rem 1.8rem 1.8rem; }
+  .login-tab-btn {
+    flex: 1; padding: 0.55rem 0; font-size: 0.85rem; font-weight: 600;
+    color: #6b7280; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all .15s ease;
+  }
+  .login-tab-btn.active { color: var(--mbv-dark); border-bottom-color: var(--mbv-green); }
+  .login-msg {
+    padding: 0.7rem 0.9rem; border-radius: 8px;
+    font-size: 0.83rem; margin-bottom: 0.5rem; display: none;
+    white-space: pre-line; line-height: 1.45;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .login-msg.show { display: block; }
+  .login-msg.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .login-msg.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .login-msg.info    { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+  .login-spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .avatar-pill {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: var(--mbv-green); color: var(--mbv-dark);
+    padding: 0.3rem 0.7rem 0.3rem 0.35rem;
+    border-radius: 999px; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+  }
+  .avatar-pill .avatar-circle {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--mbv-dark); color: var(--mbv-green);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 700;
+  }
+
+  .calc-btn {
+    background: transparent; border: none; cursor: pointer;
+    font-size: 14px; padding: 0; color: var(--mbv-green);
+    opacity: 0.7; transition: all .15s ease;
+  }
+  .calc-btn:hover { opacity: 1; transform: scale(1.15); }
+  .calc-card {
+    background: #fff; border: 1px solid #e5e3d8; border-radius: 14px;
+    padding: 1.2rem; transition: all .2s ease;
+    display: flex; flex-direction: column; gap: 0.8rem;
+  }
+  .calc-card:hover { border-color: var(--mbv-green); box-shadow: 0 8px 24px -12px rgba(140,189,65,.25); }
+  .calc-card-header {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding-bottom: 0.7rem; border-bottom: 1px solid #ecebe0;
+  }
+  .calc-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .calc-icon.e1 { background: rgba(21,36,23,.1); color: var(--mbv-dark); }
+  .calc-icon.e2 { background: rgba(140,189,65,.18); color: #5a8527; }
+  .calc-icon.e3 { background: rgba(176,169,78,.2); color: #7a751b; }
+  .calc-result {
+    background: var(--mbv-dark); color: #fff;
+    padding: 0.7rem 0.9rem; border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .calc-result .label { font-size: 10px; color: var(--mbv-olive); text-transform: uppercase; letter-spacing: 0.08em; }
+  .calc-result .value { font-size: 1.3rem; font-weight: 700; color: var(--mbv-green); }
+  .escopo-tag {
+    display: inline-block; padding: 0.15rem 0.5rem;
+    border-radius: 999px; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .escopo-tag.e1 { background: #1f2937; color: #d1d5db; }
+  .escopo-tag.e2 { background: #dcfce7; color: #166534; }
+  .escopo-tag.e3 { background: #fef3c7; color: #854d0e; }
+  #calc-modal {
+    position: fixed; inset: 0; z-index: 110;
+    background: rgba(12,23,14,.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; animation: modalFade .2s ease;
+  }
+  #calc-modal.hidden { display: none; }
+  .calc-modal-card {
+    background: #fff; border-radius: 14px; max-width: 480px; width: 100%;
+    box-shadow: 0 20px 60px -10px rgba(0,0,0,.4); animation: cardSlide .25s ease;
+  }
+  .calc-modal-header {
+    background: var(--mbv-dark); color: #fff;
+    padding: 1rem 1.3rem; border-radius: 14px 14px 0 0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .calc-modal-body { padding: 1.3rem; }
+  #ecf-modal {
+    position: fixed; inset: 0; z-index: 110;
+    background: rgba(12,23,14,.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; animation: modalFade .2s ease;
+  }
+  #ecf-modal.hidden { display: none; }
+  .calc-tab {
+    padding: 0.55rem 1rem; font-size: 0.85rem; font-weight: 600;
+    color: #6b7280; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all .15s ease;
+  }
+  .calc-tab.active { color: var(--mbv-dark); border-bottom-color: var(--mbv-green); }
+</style>
+</head>
+<body class="agro-texture">
+
+<div class="flex min-h-screen">
+
+  <aside id="sidebar" class="w-64 bg-mbv-dark text-white shrink-0 flex flex-col">
+    <div class="px-6 py-6 border-b border-mbv-border">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-mbv-green flex items-center justify-center text-mbv-dark font-display font-bold text-xl">
+          C
+        </div>
+        <div>
+          <div class="font-display text-lg leading-tight">CarbonFree</div>
+          <div class="text-[10px] uppercase tracking-widest text-mbv-green font-bold">Lei 15.042 · MBV</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <div class="px-3 pb-2 pt-1 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Operação</div>
+      <a class="sidebar-link active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+      <a class="sidebar-link" data-view="emissoes"><i data-lucide="factory"></i> Inventário GEE</a>
+      <a class="sidebar-link" data-view="calculadoras"><i data-lucide="calculator"></i> Calculadoras IA</a>
+      <a class="sidebar-link" data-view="ativos"><i data-lucide="coins"></i> Ativos CBE / CRVE</a>
+
+      <div class="px-3 pb-2 pt-4 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Agronegócio</div>
+      <a class="sidebar-link" data-view="agro"><i data-lucide="trees"></i> Certificados Rurais</a>
+      <a class="sidebar-link" data-view="propriedades"><i data-lucide="map"></i> Propriedades</a>
+
+      <div class="px-3 pb-2 pt-4 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Compliance</div>
+      <a class="sidebar-link" data-view="conformidade"><i data-lucide="shield-check"></i> Conformidade SBCE</a>
+      <a class="sidebar-link" data-view="integracao"><i data-lucide="plug"></i> Integrações SAP/TOTVS</a>
+
+      <div class="px-3 pb-2 pt-4 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Sistema</div>
+      <a class="sidebar-link" data-view="config"><i data-lucide="settings"></i> Configurações da API</a>
+    </nav>
+
+    <div class="px-4 py-4 border-t border-mbv-border text-[11px] text-mbv-lime/70">
+      <div class="flex items-center justify-between mb-2">
+        <span>Versão</span><span class="font-mono text-mbv-green">1.0.0</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span>Backend</span>
+        <span id="conn-status-mini" class="text-amber-300">…</span>
+      </div>
+    </div>
+  </aside>
+  <div id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
+  <main class="flex-1 min-w-0">
+
+    <header class="bg-white/80 backdrop-blur border-b border-stone-200 sticky top-0 z-20">
+      <div class="px-6 lg:px-8 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button class="lg:hidden text-mbv-dark" onclick="toggleSidebar()">
+            <i data-lucide="menu"></i>
+          </button>
+          <div>
+            <div class="text-[11px] uppercase tracking-widest text-stone-500 font-bold">Painel SBCE</div>
+            <div id="topbar-title" class="font-display text-lg text-mbv-dark leading-tight">Visão Geral</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div id="conn-pill" class="conn-pill">
+            <span class="dot"></span><span id="conn-text">Verificando API…</span>
+          </div>
+
+          <button id="btn-login" class="hidden md:inline-flex items-center gap-2 px-3 py-1.5 bg-mbv-cream hover:bg-stone-200 rounded-full text-xs font-semibold text-mbv-dark transition-colors" onclick="abrirModalLogin()">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            <span>Entrar</span>
+          </button>
+
+          <div id="user-menu" class="hidden items-center gap-2 relative">
+            <button class="avatar-pill" onclick="toggleUserDropdown()">
+              <span class="avatar-circle" id="avatar-initial">?</span>
+              <span id="user-email-short">…</span>
+              <i data-lucide="chevron-down" class="w-3 h-3"></i>
+            </button>
+            <div id="user-dropdown" class="hidden absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-stone-200 py-2 z-30">
+              <div class="px-4 py-2 border-b border-stone-100">
+                <div class="text-[10px] uppercase tracking-wider text-stone-400 font-bold">Conectado como</div>
+                <div class="text-xs text-mbv-dark font-semibold truncate" id="user-email-full">—</div>
+              </div>
+              <button class="w-full text-left px-4 py-2 text-sm hover:bg-stone-50 flex items-center gap-2" onclick="navigateTo('config'); toggleUserDropdown(false)">
+                <i data-lucide="settings" class="w-4 h-4 text-stone-500"></i>Configurações
+              </button>
+              <button class="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center gap-2" onclick="logout()">
+                <i data-lucide="log-out" class="w-4 h-4"></i>Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6 lg:p-8 max-w-[1400px] mx-auto">
+
+      <!-- ===================== VIEW: DASHBOARD ===================== -->
+      <section id="view-dashboard" class="view active">
+        <div class="mb-6">
+          <h1 class="section-title">Dashboard de Carbono</h1>
+          <p class="section-subtitle">Visão consolidada das emissões e ativos da carteira sob a Lei 15.042/2024.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          <div class="kpi-card">
+            <div class="kpi-accent"></div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-stone-500">Emissões Totais</span>
+              <i data-lucide="cloud" class="w-4 h-4 text-mbv-green"></i>
+            </div>
+            <div class="font-display text-3xl text-mbv-dark"><span id="kpi-total-emissoes">0,00</span></div>
+            <div class="text-xs text-stone-500 mt-1">tCO₂e · acumulado da carteira</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-accent"></div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-stone-500">CBE Disponíveis</span>
+              <i data-lucide="ticket" class="w-4 h-4 text-amber-600"></i>
+            </div>
+            <div class="font-display text-3xl text-mbv-dark"><span id="kpi-cbe">0,00</span></div>
+            <div class="text-xs text-stone-500 mt-1">Cotas Brasileiras de Emissão (passivo)</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-accent"></div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-stone-500">CRVE Disponíveis</span>
+              <i data-lucide="leaf" class="w-4 h-4 text-mbv-green"></i>
+            </div>
+            <div class="font-display text-3xl text-mbv-dark"><span id="kpi-crve">0,00</span></div>
+            <div class="text-xs text-stone-500 mt-1">Crédito de Redução Verificada (ativo)</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-accent"></div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-stone-500">Posição Líquida</span>
+              <i data-lucide="scale" class="w-4 h-4 text-mbv-olive"></i>
+            </div>
+            <div class="font-display text-3xl"><span id="kpi-deficit" class="text-mbv-dark">0,00</span></div>
+            <div id="kpi-deficit-label" class="text-xs text-stone-500 mt-1">tCO₂e</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white rounded-xl border border-stone-200 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-display text-lg text-mbv-dark">Distribuição por Escopo GHG</h3>
+                <p class="text-xs text-stone-500">Soma das emissões reportadas, em tCO₂e</p>
+              </div>
+              <div class="flex gap-3 text-xs text-stone-600">
+                <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#152417"></span>Escopo 1</span>
+                <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#8cbd41"></span>Escopo 2</span>
+                <span class="flex items-center gap-1.5"><span class="legend-dot" style="background:#b0a94e"></span>Escopo 3</span>
+              </div>
+            </div>
+            <div style="height:280px"><canvas id="chartEscopos"></canvas></div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-stone-200 p-5">
+            <h3 class="font-display text-lg text-mbv-dark mb-1">Status SBCE da Carteira</h3>
+            <p class="text-xs text-stone-500 mb-4">Inventários por classificação da Lei 15.042/2024</p>
+            <div style="height:220px"><canvas id="chartStatus"></canvas></div>
+            <div class="mt-4 space-y-2 text-sm">
+              <div class="flex justify-between"><span class="flex items-center gap-2"><span class="legend-dot" style="background:#15803d"></span>Isento (&lt;10k)</span><span id="leg-isento" class="font-semibold">0</span></div>
+              <div class="flex justify-between"><span class="flex items-center gap-2"><span class="legend-dot" style="background:#d97706"></span>Monitoramento</span><span id="leg-monit" class="font-semibold">0</span></div>
+              <div class="flex justify-between"><span class="flex items-center gap-2"><span class="legend-dot" style="background:#b91c1c"></span>Conformidade total</span><span id="leg-obrig" class="font-semibold">0</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 bg-white rounded-xl border border-stone-200">
+          <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
+            <div>
+              <h3 class="font-display text-lg text-mbv-dark">Inventários Recentes</h3>
+              <p class="text-xs text-stone-500">Últimos lançamentos sincronizados com o backend</p>
+            </div>
+            <button class="btn-secondary text-xs" onclick="navigateTo('emissoes')">
+              <i data-lucide="plus" class="w-4 h-4"></i>Novo inventário
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th>Empresa</th><th>CNPJ/CPF</th><th>Ano</th>
+                <th class="text-right">Total tCO₂e</th><th class="text-right">Déficit</th><th>Status</th>
+              </tr></thead>
+              <tbody id="tbl-recent-emissoes">
+                <tr><td colspan="6" class="empty-state">Carregando inventários…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: EMISSÕES ===================== -->
+      <section id="view-emissoes" class="view">
+        <div class="mb-6 flex flex-wrap justify-between items-end gap-3">
+          <div>
+            <h1 class="section-title">Inventário de Emissões GEE</h1>
+            <p class="section-subtitle">GHG Protocol Brasil · ISO 14064-1:2018 · Lei 15.042/2024</p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button class="btn-secondary" onclick="abrirModalECF()">
+              <i data-lucide="file-up" class="w-4 h-4"></i>Importar ECF
+            </button>
+            <button class="btn-accent" onclick="abrirFormEmissao()">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>Novo inventário
+            </button>
+          </div>
+        </div>
+
+        <div id="form-emissao" class="hidden bg-white rounded-xl border border-stone-200 p-6 mb-6">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display text-xl text-mbv-dark">Registrar inventário</h3>
+            <button class="text-stone-500 hover:text-stone-800" onclick="fecharFormEmissao()">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <form id="emissao-form" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="field-label">Empresa / Razão Social</label>
+                <input class="field-input" name="empresa" required placeholder="Ex: Fazenda Boa Vista Ltda" />
+              </div>
+              <div>
+                <label class="field-label">CNPJ / CPF</label>
+                <input class="field-input" name="cnpj_cpf" placeholder="00.000.000/0001-00" />
+              </div>
+              <div>
+                <label class="field-label">Ano de referência</label>
+                <input class="field-input" type="number" name="ano_referencia" value="2025" min="2000" max="2100" required />
+              </div>
+            </div>
+
+            <fieldset class="border border-stone-200 rounded-lg p-4">
+              <legend class="px-2 text-sm font-bold text-mbv-dark">
+                Escopo 1 · Emissões Diretas
+                <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
+              </legend>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label class="field-label flex justify-between items-center">Comb. Estacionário
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('combustivel-estacionario','e1_estacionario')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_estacionario" value="0" />
+                </div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Frota Própria
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('combustivel-movel','e1_movel')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_movel" value="0" />
+                </div>
+                <div>
+                  <label class="field-label">Processos Industriais</label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_processos" value="0" />
+                </div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Emissões Fugitivas
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('refrigerante','e1_fugitivas')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e1_fugitivas" value="0" />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="border border-stone-200 rounded-lg p-4">
+              <legend class="px-2 text-sm font-bold text-mbv-dark">
+                Escopo 2 · Energia Indireta <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
+              </legend>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label class="field-label flex justify-between items-center">Energia Elétrica
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('eletricidade','e2_eletrica')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e2_eletrica" value="0" />
+                </div>
+                <div>
+                  <label class="field-label">Vapor / Calor</label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e2_vapor" value="0" />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="border border-stone-200 rounded-lg p-4">
+              <legend class="px-2 text-sm font-bold text-mbv-dark">
+                Escopo 3 · Outras Indiretas <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
+              </legend>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <label class="field-label flex justify-between items-center">Cadeia Fornec.
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('cadeia','e3_cadeia')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e3_cadeia" value="0" />
+                </div>
+                <div>
+                  <label class="field-label flex justify-between items-center">Transporte/Distrib.
+                    <button type="button" class="calc-btn" onclick="abrirCalcContextual('transporte','e3_transporte')" title="Calcular via Motor IA">🧮</button>
+                  </label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e3_transporte" value="0" />
+                </div>
+                <div>
+                  <label class="field-label">Resíduos</label>
+                  <input class="field-input emissao-num" type="number" step="0.0001" name="e3_residuos" value="0" />
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="border border-mbv-green/40 rounded-lg p-4 bg-mbv-lime/10">
+              <legend class="px-2 text-sm font-bold text-mbv-dark">
+                Ativos de Carbono <span class="ml-2 text-xs font-normal text-stone-500">(tCO₂e)</span>
+              </legend>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="field-label">CBE Disponíveis (Permissão)</label><input class="field-input emissao-num" type="number" step="0.0001" name="cbe_disponiveis" value="0" /></div>
+                <div><label class="field-label">CRVE Disponíveis (Crédito)</label><input class="field-input emissao-num" type="number" step="0.0001" name="crve_disponiveis" value="0" /></div>
+              </div>
+            </fieldset>
+
+            <div class="bg-mbv-dark text-white rounded-lg p-4 grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+              <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Escopo 1</div><div id="prev-e1" class="font-mono">0,0000</div></div>
+              <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Escopo 2</div><div id="prev-e2" class="font-mono">0,0000</div></div>
+              <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Escopo 3</div><div id="prev-e3" class="font-mono">0,0000</div></div>
+              <div><div class="text-mbv-green text-[10px] uppercase tracking-wider font-bold">Total</div><div id="prev-total" class="font-mono text-mbv-green text-base">0,0000</div></div>
+              <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Status SBCE</div><div id="prev-status" class="font-bold">—</div></div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+              <button type="submit" class="btn-primary"><i data-lucide="save" class="w-4 h-4"></i>Enviar ao backend</button>
+              <button type="button" class="btn-secondary" onclick="fecharFormEmissao()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200">
+          <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
+            <h3 class="font-display text-lg text-mbv-dark">Inventários cadastrados</h3>
+            <button class="btn-secondary text-xs" onclick="carregarEmissoes()">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>Atualizar
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th><th>Empresa</th><th>CNPJ/CPF</th><th>Ano</th>
+                <th class="text-right">Total</th><th class="text-right">Déficit</th><th>Status</th>
+              </tr></thead>
+              <tbody id="tbl-emissoes">
+                <tr><td colspan="7" class="empty-state">Sem dados ainda. Configure a API e cadastre seu primeiro inventário.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: CALCULADORAS IA ===================== -->
+      <section id="view-calculadoras" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Calculadoras IA</h1>
+          <p class="section-subtitle">Converta consumos físicos (litros, kWh, km) em tCO₂e usando fatores IPCC AR6 + MCTI 2024.</p>
+        </div>
+
+        <div class="flex gap-1 mb-5 border-b border-stone-200">
+          <button class="calc-tab active" data-calc-tab="hub" onclick="trocarAbaCalc('hub')">
+            <i data-lucide="grid-3x3" class="w-3.5 h-3.5 inline"></i> Hub de cálculo
+          </button>
+          <button class="calc-tab" data-calc-tab="historico" onclick="trocarAbaCalc('historico')">
+            <i data-lucide="history" class="w-3.5 h-3.5 inline"></i> Histórico
+          </button>
+        </div>
+
+        <div id="calc-aba-hub">
+          <div class="bg-mbv-dark text-white rounded-xl p-4 mb-5 flex items-start gap-3">
+            <i data-lucide="info" class="w-5 h-5 text-mbv-green shrink-0 mt-0.5"></i>
+            <div class="text-sm text-mbv-lime leading-relaxed">
+              Cada calculadora pode ser usada de forma independente, ou clicada via botão 🧮 ao lado de cada
+              campo do <strong>Inventário GEE</strong> para preenchimento automático. Marque
+              <strong>"Salvar"</strong> para registrar o cálculo no histórico do usuário.
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e1">⛽</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Combustível</div>
+                  <span class="escopo-tag e1">Escopo 1</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Tipo</label>
+                  <select id="calc-comb-tipo" class="field-input"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="field-label">Quantidade</label>
+                    <input id="calc-comb-qtd" class="field-input" type="number" step="0.01" placeholder="0" />
+                  </div>
+                  <div>
+                    <label class="field-label">Categoria</label>
+                    <select id="calc-comb-cat" class="field-input">
+                      <option value="combustivel_estacionario">Estacionário</option>
+                      <option value="combustivel_movel">Móvel/Frota</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="calc-comb-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive" id="calc-comb-unit">tCO₂e</div></div>
+                <div class="value" id="calc-comb-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-comb-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('combustivel')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e2">⚡</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Energia Elétrica</div>
+                  <span class="escopo-tag e2">Escopo 2</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Consumo (kWh)</label>
+                  <input id="calc-ele-kwh" class="field-input" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div id="calc-ele-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · fator SIN</div></div>
+                <div class="value" id="calc-ele-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-ele-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('eletricidade')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e1">❄️</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Refrigerante (fugitivo)</div>
+                  <span class="escopo-tag e1">Escopo 1</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Tipo de gás</label>
+                  <select id="calc-ref-tipo" class="field-input"></select>
+                </div>
+                <div>
+                  <label class="field-label">Kg vazados</label>
+                  <input id="calc-ref-kg" class="field-input" type="number" step="0.001" placeholder="0" />
+                </div>
+                <div id="calc-ref-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · GWP AR6</div></div>
+                <div class="value" id="calc-ref-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-ref-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('refrigerante')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e3">🛒</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Cadeia de Fornecimento</div>
+                  <span class="escopo-tag e3">Escopo 3</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <label class="field-label">Setor</label>
+                  <select id="calc-cad-setor" class="field-input"></select>
+                </div>
+                <div>
+                  <label class="field-label">Valor compras (R$)</label>
+                  <input id="calc-cad-valor" class="field-input" type="number" step="0.01" placeholder="0" />
+                </div>
+                <div id="calc-cad-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · EEIO</div></div>
+                <div class="value" id="calc-cad-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-cad-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('cadeia')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+            <div class="calc-card">
+              <div class="calc-card-header">
+                <div class="calc-icon e3">🚛</div>
+                <div class="flex-1">
+                  <div class="font-display text-base text-mbv-dark">Transporte Rodoviário</div>
+                  <span class="escopo-tag e3">Escopo 3</span>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="field-label">Distância (km)</label>
+                    <input id="calc-trp-km" class="field-input" type="number" step="0.1" placeholder="0" />
+                  </div>
+                  <div>
+                    <label class="field-label">Carga (ton)</label>
+                    <input id="calc-trp-ton" class="field-input" type="number" step="0.1" value="1" />
+                  </div>
+                </div>
+                <div>
+                  <label class="field-label">Veículo</label>
+                  <select id="calc-trp-veic" class="field-input"></select>
+                </div>
+                <div id="calc-trp-preview" class="text-[11px] text-stone-500 font-mono"></div>
+              </div>
+              <div class="calc-result">
+                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · tkm</div></div>
+                <div class="value" id="calc-trp-result">—</div>
+              </div>
+              <label class="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" id="calc-trp-save" class="accent-mbv-green" /> Salvar no histórico
+              </label>
+              <button onclick="executarCalc('transporte')" class="btn-primary w-full justify-center text-sm">
+                <i data-lucide="play" class="w-4 h-4"></i> Calcular
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <div id="calc-aba-historico" class="hidden">
+          <div class="bg-white rounded-xl border border-stone-200">
+            <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
+              <h3 class="font-display text-lg text-mbv-dark">Histórico de cálculos</h3>
+              <button class="btn-secondary text-xs" onclick="carregarHistorico()">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Atualizar
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Data</th><th>Tipo</th><th>Escopo</th><th>Entrada</th>
+                  <th class="text-right">tCO₂e</th><th>Aplicado em</th><th></th>
+                </tr></thead>
+                <tbody id="tbl-historico">
+                  <tr><td colspan="7" class="empty-state">Carregando histórico…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: ATIVOS CBE/CRVE ===================== -->
+      <section id="view-ativos" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Ativos · CBE e CRVE</h1>
+          <p class="section-subtitle">Mecânica financeira da Lei 15.042/2024 — gestão de passivos e créditos.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+          <div class="bg-white rounded-xl border border-stone-200 overflow-hidden">
+            <div class="bg-amber-50 border-b border-amber-200 px-5 py-3 flex items-center gap-3">
+              <i data-lucide="ticket" class="w-5 h-5 text-amber-700"></i>
+              <div>
+                <div class="font-display text-lg text-mbv-dark">CBE — Cota Brasileira de Emissão</div>
+                <div class="text-xs text-amber-700">Passivo · permissão de emissão alocada pelo PNA</div>
+              </div>
+            </div>
+            <div class="p-5">
+              <div class="text-stone-500 text-xs uppercase tracking-wider font-bold mb-1">Saldo total da carteira</div>
+              <div class="font-display text-4xl text-mbv-dark"><span id="ativo-cbe-total">0,00</span> <span class="text-base text-stone-500">tCO₂e</span></div>
+              <div class="mt-4 text-sm text-stone-600 leading-relaxed">
+                As CBEs funcionam como teto: são distribuídas pelo Plano Nacional de Alocação (PNA) e definem
+                o limite anual de emissões que o operador pode lançar sem incorrer em sanção.
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div class="bg-stone-50 rounded p-3"><div class="text-xs text-stone-500">Operadores</div><div class="font-bold text-mbv-dark" id="ativo-cbe-operadores">0</div></div>
+                <div class="bg-stone-50 rounded p-3"><div class="text-xs text-stone-500">Média / operador</div><div class="font-bold text-mbv-dark" id="ativo-cbe-media">0,00</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-mbv-green/40 overflow-hidden">
+            <div class="bg-mbv-lime/40 border-b border-mbv-green/40 px-5 py-3 flex items-center gap-3">
+              <i data-lucide="leaf" class="w-5 h-5 text-mbv-dark"></i>
+              <div>
+                <div class="font-display text-lg text-mbv-dark">CRVE — Crédito de Redução Verificada</div>
+                <div class="text-xs text-mbv-dark/70">Ativo · resultado de projeto validado de mitigação</div>
+              </div>
+            </div>
+            <div class="p-5">
+              <div class="text-stone-500 text-xs uppercase tracking-wider font-bold mb-1">Saldo total da carteira</div>
+              <div class="font-display text-4xl text-mbv-dark"><span id="ativo-crve-total">0,00</span> <span class="text-base text-stone-500">tCO₂e</span></div>
+              <div class="mt-4 text-sm text-stone-600 leading-relaxed">
+                Os CRVEs nascem de projetos verificáveis de redução ou remoção (ex.: agrofloresta, reflorestamento,
+                manejo de dejetos). Podem ser vendidos a operadores deficitários ou usados para encerrar a conta anual.
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div class="bg-mbv-lime/30 rounded p-3"><div class="text-xs text-stone-500">Geradores</div><div class="font-bold text-mbv-dark" id="ativo-crve-geradores">0</div></div>
+                <div class="bg-mbv-lime/30 rounded p-3"><div class="text-xs text-stone-500">Média / gerador</div><div class="font-bold text-mbv-dark" id="ativo-crve-media">0,00</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200 p-5">
+          <h3 class="font-display text-lg text-mbv-dark mb-4">Posição consolidada por operador</h3>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th>Empresa</th><th class="text-right">Emissões</th><th class="text-right">CBE</th><th class="text-right">CRVE</th>
+                <th class="text-right">Posição (Ativos − Emissões)</th>
+              </tr></thead>
+              <tbody id="tbl-ativos">
+                <tr><td colspan="5" class="empty-state">Carregando posições…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: AGRO ===================== -->
+      <section id="view-agro" class="view">
+        <div class="mb-6 flex flex-wrap justify-between items-end gap-3">
+          <div>
+            <h1 class="section-title">Certificados Rurais — Geração de CRVE</h1>
+            <p class="section-subtitle">Para produtores agropecuários que contribuem para o controle de emissões</p>
+          </div>
+          <button class="btn-accent" onclick="abrirFormCertificado()">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>Emitir certificado
+          </button>
+        </div>
+
+        <div class="bg-mbv-dark text-white rounded-xl p-5 mb-6 grid md:grid-cols-3 gap-5">
+          <div class="md:col-span-2">
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="trees" class="w-5 h-5 text-mbv-green"></i>
+              <span class="text-mbv-green text-xs uppercase tracking-widest font-bold">Como funciona</span>
+            </div>
+            <p class="text-sm text-mbv-lime leading-relaxed">
+              Propriedades rurais que mantêm áreas preservadas (Reserva Legal, APP) ou implementam práticas
+              regenerativas (ILPF, agrofloresta, plantio direto) podem gerar CRVEs lastreados em hectares conservados.
+              Cada certificado emitido é registrado com hash SHA-256 e poderá ser comercializado no mercado regulado SBCE
+              quando o registro central do Serpro estiver operacional.
+            </p>
+          </div>
+          <div class="border-l border-mbv-border pl-5">
+            <div class="text-mbv-olive text-xs uppercase tracking-widest font-bold mb-1">Base legal</div>
+            <ul class="text-xs space-y-1 text-mbv-lime">
+              <li>· Lei 15.042/2024 (SBCE)</li>
+              <li>· Lei 14.119/2021 (PSA)</li>
+              <li>· Lei 12.651/2012 (Código Florestal)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="form-certificado" class="hidden bg-white rounded-xl border border-stone-200 p-6 mb-6">
+          <div class="flex items-center justify-between mb-5">
+            <h3 class="font-display text-xl text-mbv-dark">Emitir certificado ambiental</h3>
+            <button class="text-stone-500 hover:text-stone-800" onclick="fecharFormCertificado()">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+
+          <form id="cert-form" class="space-y-5">
+
+            <!-- ===== Busca por CNPJ/CPF nos órgãos ambientais (autopreenche o formulário) ===== -->
+            <div class="bg-mbv-lime/10 border border-mbv-green/30 rounded-lg p-4">
+              <label class="field-label flex items-center gap-2">
+                <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                Buscar nos órgãos ambientais por CNPJ / CPF
+              </label>
+              <div class="flex gap-2 flex-wrap">
+                <input class="field-input" id="agro-doc" style="flex:1 1 240px"
+                       placeholder="00.000.000/0001-00 ou CPF (somente números também servem)" />
+                <button type="button" class="btn-secondary" id="agro-doc-btn" onclick="buscarDadosAgro()">
+                  <i data-lucide="download" class="w-4 h-4"></i> Buscar dados
+                </button>
+              </div>
+              <div id="agro-doc-info" class="text-xs mt-2 leading-relaxed"
+                   style="display:none;background:#faf9f3;border:1px solid #ecebe0;border-radius:8px;padding:.6rem .8rem;"></div>
+              <p class="text-[11px] text-stone-500 mt-2">
+                Por CNPJ, traz Titular, município/UF e CNAE da Receita, infere o bioma e sugere a atividade.
+                A <b>área preservada</b> vive no CAR (Nº do CAR/geometria) e deve ser informada manualmente.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="field-label">Titular / Razão Social</label>
+                <input class="field-input" name="titular" required placeholder="Ex: Fazenda São José Ltda" />
+              </div>
+              <div>
+                <label class="field-label">Área preservada (hectares)</label>
+                <input class="field-input" type="number" step="0.01" min="0.01" name="area_hectares" required placeholder="250.00" />
+              </div>
+              <div>
+                <label class="field-label">Bioma</label>
+                <select class="field-input" name="bioma" required>
+                  <option value="">Selecione…</option>
+                  <option>Amazônia</option>
+                  <option>Cerrado</option>
+                  <option>Mata Atlântica</option>
+                  <option>Caatinga</option>
+                  <option>Pampa</option>
+                  <option>Pantanal</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Atividade registrada</label>
+                <select class="field-input" name="atividade" required>
+                  <option value="">Selecione…</option>
+                  <option>Agricultura de Baixo Carbono</option>
+                  <option>ILPF (Integração Lavoura-Pecuária-Floresta)</option>
+                  <option>Plantio Direto na Palha</option>
+                  <option>Agrofloresta / Sistemas Agroflorestais</option>
+                  <option>Restauração de Pastagens Degradadas</option>
+                  <option>Reflorestamento Comercial</option>
+                  <option>Manejo de Dejetos Animais</option>
+                  <option>Conservação de Reserva Legal</option>
+                  <option>Conservação de APP</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="bg-mbv-lime/20 border border-mbv-green/30 rounded-lg p-4 text-sm text-mbv-dark">
+              <strong>Estimativa de lastro:</strong> O backend calculará o percentual mínimo do bioma e o valor estimado da cota-carbono no momento da emissão. O PDF será gerado com hash SHA-256 e disponibilizado em <code class="font-mono text-xs">certificados/</code>.
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+              <button type="submit" class="btn-primary"><i data-lucide="award" class="w-4 h-4"></i>Emitir certificado</button>
+              <button type="button" class="btn-secondary" onclick="fecharFormCertificado()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200">
+          <div class="px-5 py-4 border-b border-stone-200">
+            <h3 class="font-display text-lg text-mbv-dark">Certificados emitidos</h3>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th>Código</th><th>Titular</th><th>Bioma</th><th>Atividade</th>
+                <th class="text-right">Área (ha)</th><th class="text-right">Lastro (R$)</th>
+              </tr></thead>
+              <tbody id="tbl-certificados">
+                <tr><td colspan="6" class="empty-state">Nenhum certificado emitido ainda.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: PROPRIEDADES ===================== -->
+      <section id="view-propriedades" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Propriedades Rurais</h1>
+          <p class="section-subtitle">Cadastro de unidades produtivas geradoras de CRVE</p>
+        </div>
+        <div class="bg-white rounded-xl border border-stone-200 p-8 text-center">
+          <i data-lucide="map" class="w-12 h-12 text-mbv-olive mx-auto mb-3"></i>
+          <h3 class="font-display text-xl text-mbv-dark mb-2">Módulo em integração</h3>
+          <p class="text-sm text-stone-600 max-w-xl mx-auto">
+            O modelo <code class="font-mono text-xs bg-stone-100 px-1.5 py-0.5 rounded">app/models/propriedade.py</code> já existe no backend.
+            Para ativá-lo no painel, adicione a rota correspondente em <code class="font-mono text-xs bg-stone-100 px-1.5 py-0.5 rounded">app/api/routes/</code>
+            seguindo o padrão de <code class="font-mono text-xs bg-stone-100 px-1.5 py-0.5 rounded">certificados.py</code> e exponha em <code class="font-mono text-xs bg-stone-100 px-1.5 py-0.5 rounded">main.py</code>.
+          </p>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: CONFORMIDADE ===================== -->
+      <section id="view-conformidade" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Conformidade SBCE</h1>
+          <p class="section-subtitle">Limiares de obrigatoriedade definidos pela Lei 15.042/2024</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <div class="bg-white border-l-4 border-sbce-ok rounded-xl p-5">
+            <div class="badge badge-isento mb-3">ISENTO</div>
+            <div class="font-display text-2xl text-mbv-dark mb-1">&lt; 10.000 tCO₂e</div>
+            <p class="text-sm text-stone-600">Sem obrigações imediatas. Pode participar voluntariamente para gerar e vender CRVEs no mercado.</p>
+          </div>
+          <div class="bg-white border-l-4 border-sbce-warn rounded-xl p-5">
+            <div class="badge badge-monit mb-3">MONITORAMENTO</div>
+            <div class="font-display text-2xl text-mbv-dark mb-1">10.000 – 25.000 tCO₂e</div>
+            <p class="text-sm text-stone-600">Relato obrigatório. Deve monitorar fontes de emissão e submeter relatórios MRV periódicos ao órgão gestor.</p>
+          </div>
+          <div class="bg-white border-l-4 border-sbce-danger rounded-xl p-5">
+            <div class="badge badge-obrig mb-3">CONFORMIDADE TOTAL</div>
+            <div class="font-display text-2xl text-mbv-dark mb-1">&gt; 25.000 tCO₂e</div>
+            <p class="text-sm text-stone-600">Sujeito a metas compulsórias. Deve adquirir CBE/CRVE para fechar a conta anual sob pena de sanções.</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200 p-5">
+          <h3 class="font-display text-lg text-mbv-dark mb-4">Mecânica do mercado regulado</h3>
+          <div class="grid md:grid-cols-2 gap-5 text-sm">
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div class="font-bold text-amber-800 mb-2 flex items-center gap-2">
+                <i data-lucide="ticket" class="w-4 h-4"></i> CBE — Permissão (passivo)
+              </div>
+              <ul class="space-y-1.5 text-stone-700">
+                <li>· Origem: alocação pelo PNA (governo)</li>
+                <li>· Natureza: teto limitador anual</li>
+                <li>· No balanço: passivo regulatório</li>
+                <li>· Excedente pode ser comercializado</li>
+              </ul>
+            </div>
+            <div class="bg-mbv-lime/20 border border-mbv-green/40 rounded-lg p-4">
+              <div class="font-bold text-mbv-dark mb-2 flex items-center gap-2">
+                <i data-lucide="leaf" class="w-4 h-4"></i> CRVE — Crédito (ativo)
+              </div>
+              <ul class="space-y-1.5 text-stone-700">
+                <li>· Origem: projetos validados de mitigação</li>
+                <li>· Natureza: resultado positivo verificável</li>
+                <li>· No balanço: ativo intangível negociável</li>
+                <li>· Pode ser usado ou vendido a deficitários</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: INTEGRAÇÃO ===================== -->
+      <section id="view-integracao" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Integrações ERP</h1>
+          <p class="section-subtitle">Endpoints para SAP EHS, TOTVS RM e webhooks corporativos</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-5 mb-6">
+          <div class="bg-white rounded-xl border border-stone-200 p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded bg-blue-100 flex items-center justify-center text-blue-700 font-bold">SAP</div>
+              <div>
+                <div class="font-display text-lg text-mbv-dark">SAP EHS</div>
+                <div class="text-xs text-stone-500">Environment, Health & Safety</div>
+              </div>
+            </div>
+            <div class="font-mono text-xs bg-stone-900 text-mbv-green p-3 rounded mb-3">POST /api/v1/integracao/sap/emissoes</div>
+            <p class="text-sm text-stone-600">Aceita payload com <code class="font-mono text-xs">CompanyCode</code>, <code class="font-mono text-xs">FiscalYear</code>, <code class="font-mono text-xs">GHGScope1/2/3</code>, <code class="font-mono text-xs">CBEAssets</code>, <code class="font-mono text-xs">CRVEAssets</code>.</p>
+          </div>
+          <div class="bg-white rounded-xl border border-stone-200 p-5">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 rounded bg-purple-100 flex items-center justify-center text-purple-700 font-bold">TVS</div>
+              <div>
+                <div class="font-display text-lg text-mbv-dark">TOTVS RM / Fluig</div>
+                <div class="text-xs text-stone-500">Backoffice nacional</div>
+              </div>
+            </div>
+            <div class="font-mono text-xs bg-stone-900 text-mbv-green p-3 rounded mb-3">POST /api/v1/integracao/totvs/emissoes</div>
+            <p class="text-sm text-stone-600">Aceita <code class="font-mono text-xs">codEmpresa</code>, <code class="font-mono text-xs">anoReferencia</code>, <code class="font-mono text-xs">escopo1/2/3</code>, <code class="font-mono text-xs">ativos_cbe</code>, <code class="font-mono text-xs">ativos_crve</code>.</p>
+          </div>
+        </div>
+
+        <div class="bg-mbv-dark text-mbv-lime rounded-xl p-5 font-mono text-xs">
+          <div class="text-mbv-green mb-2 font-bold">Exemplo de chamada autenticada:</div>
+<pre class="overflow-x-auto"># Bearer JWT do Supabase
+curl -X POST <span id="sample-base">http://localhost:8000</span>/api/v1/emissoes/ \
+  -H "Authorization: Bearer SEU_JWT_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "empresa": "Fazenda Boa Vista",
+    "cnpj_cpf": "12.345.678/0001-99",
+    "ano_referencia": 2025,
+    "e1_estacionario": 120.5,
+    "e2_eletrica": 340.0,
+    "cbe_disponiveis": 200.0,
+    "crve_disponiveis": 50.0
+  }'</pre>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: CONFIG ===================== -->
+      <section id="view-config" class="view">
+        <div class="mb-6">
+          <h1 class="section-title">Configurações da API</h1>
+          <p class="section-subtitle">Defina o endpoint e o token JWT (Supabase) que este painel usará</p>
+        </div>
+
+        <div class="bg-white rounded-xl border border-stone-200 p-6 max-w-2xl">
+          <form id="config-form" class="space-y-4">
+            <div>
+              <label class="field-label">Base URL do backend</label>
+              <input class="field-input" id="cfg-api-url" placeholder="http://localhost:8000" />
+              <p class="text-xs text-stone-500 mt-1">Deve apontar para a raiz da API FastAPI (sem <code>/api/v1</code>).</p>
+            </div>
+            <div>
+              <label class="field-label">JWT Bearer (Supabase)</label>
+              <textarea class="field-input font-mono text-xs" id="cfg-token" rows="4" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+              <p class="text-xs text-stone-500 mt-1">O token é armazenado apenas em <code>localStorage</code> deste navegador.</p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button type="submit" class="btn-primary"><i data-lucide="save" class="w-4 h-4"></i>Salvar e testar</button>
+              <button type="button" class="btn-secondary" onclick="limparConfig()"><i data-lucide="trash-2" class="w-4 h-4"></i>Limpar</button>
+            </div>
+          </form>
+
+          <div class="mt-6 pt-5 border-t border-stone-200 text-sm space-y-2">
+            <div class="flex justify-between"><span class="text-stone-500">Status do health-check</span><span id="cfg-health" class="font-mono">—</span></div>
+            <div class="flex justify-between"><span class="text-stone-500">Endpoint testado</span><span id="cfg-endpoint" class="font-mono text-xs text-stone-700">—</span></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-area"></div>
+
+<!-- ===================== MINI-MODAL CALC CONTEXTUAL ===================== -->
+<div id="calc-modal" class="hidden">
+  <div class="calc-modal-card">
+    <div class="calc-modal-header">
+      <div>
+        <div class="text-mbv-green text-[10px] uppercase tracking-widest font-bold">Motor IA</div>
+        <div id="calc-modal-title" class="font-display text-lg">Calculadora</div>
+      </div>
+      <button onclick="fecharCalcContextual()" class="text-mbv-lime hover:text-white">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="calc-modal-body">
+      <div class="text-xs text-stone-500 mb-3">
+        Resultado será injetado no campo: <code id="calc-modal-target" class="font-mono bg-stone-100 px-1 rounded text-mbv-dark"></code>
+      </div>
+      <div id="calc-modal-form" class="space-y-3"></div>
+      <div id="calc-modal-result" class="calc-result mt-4 hidden">
+        <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e</div></div>
+        <div class="value" id="calc-modal-value">—</div>
+      </div>
+      <label class="flex items-center gap-2 text-xs text-stone-600 mt-3">
+        <input type="checkbox" id="calc-modal-save" class="accent-mbv-green" /> Salvar este cálculo no histórico
+      </label>
+      <div class="flex gap-2 mt-4">
+        <button onclick="calcularContextual()" class="btn-primary flex-1 justify-center text-sm">
+          <i data-lucide="play" class="w-4 h-4"></i> Calcular
+        </button>
+        <button onclick="aplicarContextual()" id="btn-aplicar-contextual" class="btn-accent flex-1 justify-center text-sm hidden">
+          <i data-lucide="check" class="w-4 h-4"></i> Aplicar no campo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL IMPORTAR ECF ===================== -->
+<div id="ecf-modal" class="hidden">
+  <div class="calc-modal-card">
+    <div class="calc-modal-header">
+      <div>
+        <div class="text-mbv-green text-[10px] uppercase tracking-widest font-bold">Motor IA</div>
+        <div class="font-display text-lg">Importar ECF (imposto de renda)</div>
+      </div>
+      <button onclick="fecharModalECF()" class="text-mbv-lime hover:text-white"><i data-lucide="x"></i></button>
+    </div>
+    <div class="calc-modal-body">
+      <p class="text-xs text-stone-500 mb-3">
+        Envie o arquivo <code class="font-mono">.txt</code> da ECF transmitida ao SPED. O sistema lê CNPJ,
+        receita e gastos, consulta o CNAE e estima as emissões por balanço — sem digitação manual.
+      </p>
+      <div class="flex gap-2 items-center flex-wrap">
+        <input type="file" id="ecf-file-inv" accept=".txt,.ecf" class="field-input" style="flex:1 1 220px; padding:.4rem;" />
+        <button id="btn-ler-ecf" onclick="lerECFInventario()" class="btn-primary text-sm">
+          <i data-lucide="upload" class="w-4 h-4"></i> Ler ECF
+        </button>
+      </div>
+
+      <div id="ecf-modal-result" class="hidden mt-4 p-3 rounded-lg bg-stone-50 border border-stone-200 text-sm space-y-1">
+        <div id="ecf-modal-summary"></div>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button id="btn-aplicar-ecf" onclick="aplicarECFnoInventario()" class="btn-accent flex-1 justify-center text-sm hidden">
+          <i data-lucide="check" class="w-4 h-4"></i> Aplicar no inventário
+        </button>
+        <button onclick="fecharModalECF()" class="btn-secondary flex-1 justify-center text-sm">Fechar</button>
+      </div>
+      <p class="text-[11px] text-stone-400 mt-3">
+        Empresas do Simples (sem ECF) preenchem o inventário manualmente.
+        Método spend-based é de triagem: refine Escopos 1 e 2 com dado físico acima de 25.000 tCO₂e/ano.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL DE LOGIN ===================== -->
+<div id="login-modal" class="hidden">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">C</div>
+      <div class="font-display text-2xl leading-tight">CarbonFree 15.042</div>
+      <div class="text-mbv-green text-[11px] uppercase tracking-widest font-bold mt-1">Movimento Brasil Verde · SBCE</div>
+      <p class="text-mbv-lime/80 text-xs mt-2 leading-relaxed">
+        Autentique-se com sua conta Supabase para acessar o painel.
+      </p>
+    </div>
+
+    <div class="login-body">
+      <div class="flex gap-1 mb-5 border-b border-stone-200">
+        <button class="login-tab-btn active" data-tab="signin" onclick="trocarAbaLogin('signin')">Entrar</button>
+        <button class="login-tab-btn" data-tab="signup" onclick="trocarAbaLogin('signup')">Criar conta</button>
+      </div>
+
+      <div id="login-msg" class="login-msg"></div>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="field-label">E-mail</label>
+          <input class="field-input" type="email" id="login-email" required autocomplete="email" placeholder="seu@email.com" />
+        </div>
+        <div>
+          <label class="field-label">Senha</label>
+          <input class="field-input" type="password" id="login-senha" required autocomplete="current-password" placeholder="•••••••" minlength="6" />
+        </div>
+
+        <button type="submit" id="login-submit" class="w-full btn-primary justify-center" style="padding:0.8rem;">
+          <span id="login-btn-text">Entrar</span>
+        </button>
+
+        <div class="text-center pt-2">
+          <button type="button" class="text-xs text-stone-500 hover:text-mbv-dark underline" onclick="recuperarSenha()">
+            Esqueci minha senha
+          </button>
+        </div>
+      </form>
+
+      <div id="supa-manual" class="hidden mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <div class="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1">
+          <i data-lucide="wrench" class="w-3 h-3"></i> Configuração manual do Supabase
+        </div>
+        <p class="text-[11px] text-amber-800 mb-2 leading-relaxed">
+          Cole a URL e a anon key do Supabase (Settings → API).
+        </p>
+        <input id="manual-supa-url" class="field-input mb-2" placeholder="https://xxx.supabase.co" />
+        <textarea id="manual-supa-key" class="field-input font-mono text-[10px] mb-2" rows="2" placeholder="anon key (eyJhbGc...)"></textarea>
+        <button onclick="aplicarConfigManual()" class="btn-primary w-full justify-center text-xs" style="padding:0.5rem;">
+          Aplicar e testar
+        </button>
+      </div>
+
+      <div class="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+        <span>Servidor Supabase</span>
+        <span id="supa-status" class="font-mono">verificando…</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Estado e config ---------- */
+const STORAGE_KEY = 'cf15042_config';
+
+const state = {
+  apiUrl: '',
+  token: '',
+  refreshToken: '',
+  user: null,
+  supabaseUrl: '',
+  supabaseKey: '',
+  emissoes: [],
+  certificados: [],
+};
+
+/* ---------- Persistência ---------- */
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      state.apiUrl       = c.apiUrl       || autoDetectApiUrl();
+      state.token        = c.token        || '';
+      state.refreshToken = c.refreshToken || '';
+      state.user         = c.user         || null;
+    } else {
+      state.apiUrl = autoDetectApiUrl();
+    }
+    const manualRaw = localStorage.getItem('cf15042_manual_supa');
+    if (manualRaw) {
+      const m = JSON.parse(manualRaw);
+      if (m.url && m.key) {
+        state.supabaseUrl = m.url;
+        state.supabaseKey = m.key;
+      }
+    }
+  } catch (e) { state.apiUrl = autoDetectApiUrl(); }
+
+  document.getElementById('cfg-api-url').value = state.apiUrl;
+  document.getElementById('cfg-token').value   = state.token;
+  document.getElementById('sample-base').textContent = state.apiUrl || 'http://localhost:8000';
+}
+
+function autoDetectApiUrl() {
+  if (window.location.protocol.startsWith('http')) {
+    return window.location.origin;
+  }
+  return 'http://localhost:8000';
+}
+
+function saveConfig() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    apiUrl: state.apiUrl,
+    token: state.token,
+    refreshToken: state.refreshToken,
+    user: state.user,
+  }));
+}
+
+function limparConfig() {
+  localStorage.removeItem(STORAGE_KEY);
+  state.apiUrl = ''; state.token = ''; state.refreshToken = ''; state.user = null;
+  document.getElementById('cfg-api-url').value = '';
+  document.getElementById('cfg-token').value   = '';
+  toast('Configuração removida.', 'warn');
+  setConnState(false);
+  atualizarUIUsuario();
+}
+
+/* ---------- Toast ---------- */
+function toast(msg, kind = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  t.textContent = msg;
+  document.getElementById('toast-area').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(20px)'; }, 4500);
+  setTimeout(() => t.remove(), 4900);
+}
+
+/* ---------- Conexão ---------- */
+function setConnState(online, label) {
+  const pill = document.getElementById('conn-pill');
+  const txt  = document.getElementById('conn-text');
+  const mini = document.getElementById('conn-status-mini');
+  pill.classList.remove('online', 'offline');
+  if (label === undefined) {
+    if (online) { pill.classList.add('online'); txt.textContent = 'Backend online'; mini.textContent = 'online'; mini.className = 'text-mbv-green font-mono'; }
+    else        { pill.classList.add('offline'); txt.textContent = 'Backend offline'; mini.textContent = 'offline'; mini.className = 'text-red-300 font-mono'; }
+  } else { txt.textContent = label; mini.textContent = label; }
+}
+
+async function checkHealth() {
+  if (!state.apiUrl) { setConnState(false, 'Configure a API'); return false; }
+  try {
+    const r = await fetch(`${state.apiUrl}/health`);
+    if (r.ok) { setConnState(true); return true; }
+    setConnState(false); return false;
+  } catch { setConnState(false); return false; }
+}
+
+/* ---------- Carregar config Supabase do backend ---------- */
+async function carregarConfigSupabase() {
+  if (state.supabaseUrl && state.supabaseKey) return true;
+  if (!state.apiUrl) return false;
+  try {
+    const r = await fetch(`${state.apiUrl}/api/v1/public-config`);
+    if (!r.ok) { console.warn('public-config retornou', r.status); return false; }
+    const cfg = await r.json();
+    if (!cfg.supabase_url || !cfg.supabase_anon_key) {
+      console.warn('Backend devolveu supabase config vazia.');
+      return false;
+    }
+    state.supabaseUrl = cfg.supabase_url;
+    state.supabaseKey = cfg.supabase_anon_key;
+    return true;
+  } catch (e) {
+    console.warn('Falha ao carregar public-config:', e.message);
+    return false;
+  }
+}
+
+/* ---------- Supabase Auth (chamadas REST diretas) ---------- */
+async function supabaseSignIn(email, senha) {
+  const r = await fetch(`${state.supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': state.supabaseKey },
+    body: JSON.stringify({ email, password: senha }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || data.error || 'Falha no login');
+  return data;
+}
+
+async function supabaseSignUp(email, senha) {
+  const r = await fetch(`${state.supabaseUrl}/auth/v1/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': state.supabaseKey },
+    body: JSON.stringify({ email, password: senha }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error_description || data.msg || data.error || 'Falha no cadastro');
+  return data;
+}
+
+async function supabaseRecoverPassword(email) {
+  const r = await fetch(`${state.supabaseUrl}/auth/v1/recover`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': state.supabaseKey },
+    body: JSON.stringify({ email }),
+  });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.error_description || data.msg || 'Falha ao enviar e-mail');
+  }
+  return true;
+}
+
+async function supabaseLogout() {
+  if (!state.token) return;
+  try {
+    await fetch(`${state.supabaseUrl}/auth/v1/logout`, {
+      method: 'POST',
+      headers: { 'apikey': state.supabaseKey, 'Authorization': `Bearer ${state.token}` },
+    });
+  } catch (e) { /* ignore */ }
+}
+
+/* ---------- Modal de login ---------- */
+let loginAba = 'signin';
+
+function abrirModalLogin() {
+  document.getElementById('login-modal').classList.remove('hidden');
+  document.getElementById('login-email').focus();
+  showLoginMsg('', '');
+  testarSupabase();
+}
+function fecharModalLogin() {
+  document.getElementById('login-modal').classList.add('hidden');
+}
+
+function trocarAbaLogin(aba) {
+  loginAba = aba;
+  document.querySelectorAll('.login-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === aba);
+  });
+  document.getElementById('login-btn-text').textContent = aba === 'signin' ? 'Entrar' : 'Criar conta';
+  showLoginMsg('', '');
+}
+
+function showLoginMsg(texto, kind) {
+  const el = document.getElementById('login-msg');
+  el.className = 'login-msg' + (texto ? ' show ' + kind : '');
+  el.textContent = texto;
+}
+
+async function testarSupabase() {
+  const status = document.getElementById('supa-status');
+  if (!state.supabaseUrl) {
+    status.textContent = 'recarregando…';
+    status.className = 'font-mono text-amber-600';
+    const ok = await carregarConfigSupabase();
+    if (!ok) {
+      status.innerHTML = '<button onclick="diagnosticarSupabase()" class="underline text-red-600 hover:text-red-800">não configurado · diagnosticar</button>';
+      return;
+    }
+  }
+  try {
+    const r = await fetch(`${state.supabaseUrl}/auth/v1/health`, { headers: { 'apikey': state.supabaseKey } });
+    if (r.ok) { status.textContent = 'conectado ✓'; status.className = 'font-mono text-emerald-600'; }
+    else { status.textContent = 'erro ' + r.status; status.className = 'font-mono text-red-600'; }
+  } catch (e) {
+    status.textContent = 'inacessível';
+    status.className = 'font-mono text-red-600';
+  }
+}
+
+async function diagnosticarSupabase() {
+  const linhas = [];
+  linhas.push(`Backend: ${state.apiUrl}`);
+  try {
+    const r = await fetch(`${state.apiUrl}/health`);
+    linhas.push(`/health: ${r.status} ${r.ok ? '✓' : '✗'}`);
+  } catch (e) { linhas.push(`/health: ERRO (${e.message})`); }
+  try {
+    const r = await fetch(`${state.apiUrl}/api/v1/public-config`);
+    linhas.push(`/api/v1/public-config: ${r.status}`);
+    if (r.ok) {
+      const cfg = await r.json();
+      linhas.push(`  supabase_url: ${cfg.supabase_url || '(vazio!)'}`);
+      linhas.push(`  supabase_anon_key: ${cfg.supabase_anon_key ? '(presente, ' + cfg.supabase_anon_key.length + ' chars)' : '(VAZIO!)'}`);
+    } else {
+      linhas.push(`  -> Endpoint não existe ou retornou erro.`);
+      linhas.push(`  -> Verifique se app/api/main.py foi atualizado.`);
+    }
+  } catch (e) { linhas.push(`/api/v1/public-config: ERRO (${e.message})`); }
+  showLoginMsg(linhas.join('\n'), 'error');
+  setTimeout(() => mostrarConfigManual(), 100);
+}
+
+function mostrarConfigManual() {
+  const div = document.getElementById('supa-manual');
+  div.classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function aplicarConfigManual() {
+  const url = document.getElementById('manual-supa-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('manual-supa-key').value.trim();
+  if (!url || !key) { showLoginMsg('Preencha URL e anon key.', 'error'); return; }
+  state.supabaseUrl = url;
+  state.supabaseKey = key;
+  localStorage.setItem('cf15042_manual_supa', JSON.stringify({ url, key }));
+  showLoginMsg('Configuração aplicada. Tente fazer login agora.', 'success');
+  document.getElementById('supa-manual').classList.add('hidden');
+  await testarSupabase();
+}
+
+/* ---------- Submit do form de login ---------- */
+document.getElementById('login-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn   = document.getElementById('login-submit');
+  const btnTxt = document.getElementById('login-btn-text');
+
+  if (!state.supabaseUrl || !state.supabaseKey) {
+    showLoginMsg('Configuração do Supabase não carregada. Verifique se a API está online.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btnTxt.innerHTML = '<span class="login-spinner"></span> ' + (loginAba === 'signin' ? 'Entrando…' : 'Criando…');
+
+  try {
+    if (loginAba === 'signin') {
+      const data = await supabaseSignIn(email, senha);
+      finalizarLogin(data);
+    } else {
+      const data = await supabaseSignUp(email, senha);
+      if (data.access_token) {
+        finalizarLogin(data);
+      } else if (data.session) {
+        finalizarLogin(data.session);
+      } else {
+        showLoginMsg('Conta criada! Verifique seu e-mail para confirmar antes de entrar.', 'success');
+        trocarAbaLogin('signin');
+      }
+    }
+  } catch (e) {
+    let msg = e.message || 'Falha no login';
+    if (msg.toLowerCase().includes('invalid login')) msg = 'E-mail ou senha incorretos.';
+    if (msg.toLowerCase().includes('already registered')) msg = 'Esse e-mail já está cadastrado. Use a aba "Entrar".';
+    if (msg.toLowerCase().includes('email rate limit')) msg = 'Muitas tentativas. Aguarde alguns minutos.';
+    showLoginMsg(msg, 'error');
+  } finally {
+    btn.disabled = false;
+    btnTxt.textContent = loginAba === 'signin' ? 'Entrar' : 'Criar conta';
+  }
+});
+
+function finalizarLogin(authData) {
+  state.token = authData.access_token;
+  state.refreshToken = authData.refresh_token || '';
+  state.user = authData.user ? { id: authData.user.id, email: authData.user.email } : null;
+  document.getElementById('cfg-token').value = state.token;
+  saveConfig();
+  atualizarUIUsuario();
+  showLoginMsg('Login realizado com sucesso!', 'success');
+  toast(`Bem-vindo(a), ${state.user?.email || 'usuário'}!`, 'success');
+  setTimeout(async () => { fecharModalLogin(); await refreshDashboard(); }, 600);
+}
+
+async function recuperarSenha() {
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) { showLoginMsg('Digite seu e-mail antes de pedir recuperação.', 'error'); return; }
+  try {
+    await supabaseRecoverPassword(email);
+    showLoginMsg(`Se '${email}' estiver cadastrado, um link foi enviado para sua caixa de entrada.`, 'info');
+  } catch (e) { showLoginMsg(e.message, 'error'); }
+}
+
+async function logout() {
+  await supabaseLogout();
+  state.token = ''; state.refreshToken = ''; state.user = null;
+  document.getElementById('cfg-token').value = '';
+  saveConfig();
+  toggleUserDropdown(false);
+  atualizarUIUsuario();
+  toast('Sessão encerrada.', 'warn');
+  setTimeout(() => abrirModalLogin(), 400);
+}
+
+/* ---------- UI do usuário ---------- */
+function atualizarUIUsuario() {
+  const btnLogin = document.getElementById('btn-login');
+  const userMenu = document.getElementById('user-menu');
+  if (state.user && state.token) {
+    btnLogin.classList.add('hidden');
+    userMenu.classList.remove('hidden');
+    userMenu.classList.add('inline-flex');
+    const email = state.user.email || '';
+    document.getElementById('user-email-full').textContent = email;
+    document.getElementById('user-email-short').textContent =
+      email.length > 18 ? email.split('@')[0] : email;
+    document.getElementById('avatar-initial').textContent = (email[0] || '?').toUpperCase();
+  } else {
+    btnLogin.classList.remove('hidden');
+    userMenu.classList.add('hidden');
+    userMenu.classList.remove('inline-flex');
+  }
+}
+
+function toggleUserDropdown(force) {
+  const dd = document.getElementById('user-dropdown');
+  const open = force === undefined ? dd.classList.contains('hidden') : force;
+  dd.classList.toggle('hidden', !open);
+}
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('#user-menu')) toggleUserDropdown(false);
+});
+
+/* ---------- Fetch helper ---------- */
+async function api(path, opts = {}) {
+  if (!state.apiUrl) throw new Error('API não configurada');
+  const headers = Object.assign({
+    'Content-Type': 'application/json',
+    ...(state.token ? { 'Authorization': `Bearer ${state.token}` } : {})
+  }, opts.headers || {});
+  const resp = await fetch(`${state.apiUrl}${path}`, { ...opts, headers });
+  if (resp.status === 401) {
+    toast('Sessão expirada. Faça login novamente.', 'warn');
+    state.token = ''; state.user = null;
+    saveConfig(); atualizarUIUsuario();
+    abrirModalLogin();
+    throw new Error('Não autenticado');
+  }
+  if (!resp.ok) {
+    let detail = '';
+    try { detail = (await resp.json()).detail || ''; } catch {}
+    throw new Error(`${resp.status} ${resp.statusText}${detail ? ' — ' + detail : ''}`);
+  }
+  if (resp.status === 204) return null;
+  return resp.json();
+}
+
+/* ---------- Navegação SPA ---------- */
+const VIEW_TITLES = {
+  dashboard: 'Visão Geral',
+  emissoes: 'Inventário GEE',
+  calculadoras: 'Calculadoras IA',
+  ativos: 'Ativos CBE / CRVE',
+  agro: 'Certificados Rurais',
+  propriedades: 'Propriedades',
+  conformidade: 'Conformidade SBCE',
+  integracao: 'Integrações',
+  config: 'Configurações',
+};
+
+function navigateTo(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view)?.classList.add('active');
+  document.querySelectorAll('.sidebar-link').forEach(a => a.classList.remove('active'));
+  document.querySelector(`.sidebar-link[data-view="${view}"]`)?.classList.add('active');
+  document.getElementById('topbar-title').textContent = VIEW_TITLES[view] || '';
+  if (window.innerWidth < 1024) toggleSidebar(false);
+  if (view === 'emissoes') carregarEmissoes();
+  if (view === 'ativos') carregarAtivos();
+  if (view === 'agro') carregarCertificados();
+  if (view === 'dashboard') refreshDashboard();
+  if (view === 'calculadoras') iniciarCalculadoras();
+}
+
+document.querySelectorAll('.sidebar-link').forEach(a => {
+  a.addEventListener('click', () => navigateTo(a.dataset.view));
+});
+
+function toggleSidebar(force) {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('sidebar-backdrop');
+  const open = force === undefined ? !sb.classList.contains('open') : force;
+  sb.classList.toggle('open', open);
+  bd.classList.toggle('open', open);
+}
+
+/* ---------- Cálculo Emissão (espelho da lógica do backend) ---------- */
+function calcularEmissao(dados) {
+  const e1 = +dados.e1_estacionario + +dados.e1_movel + +dados.e1_processos + +dados.e1_fugitivas;
+  const e2 = +dados.e2_eletrica + +dados.e2_vapor;
+  const e3 = +dados.e3_cadeia + +dados.e3_transporte + +dados.e3_residuos;
+  const total = e1 + e2 + e3;
+  const ativos = +dados.cbe_disponiveis + +dados.crve_disponiveis;
+  const deficit = total - ativos;
+  let status;
+  if (total < 10000) status = 'ISENTO';
+  else if (total <= 25000) status = 'MONITORAMENTO OBRIGATÓRIO';
+  else status = 'CONFORMIDADE TOTAL OBRIGATÓRIA';
+  return { e1, e2, e3, total, deficit, status };
+}
+
+function fmt(n, dec = 2) {
+  return Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function badgeStatus(status) {
+  const c = status === 'ISENTO' ? 'badge-isento'
+          : status?.startsWith('MONIT') ? 'badge-monit'
+          : 'badge-obrig';
+  return `<span class="badge ${c}">${status || '—'}</span>`;
+}
+
+/* ---------- Form Emissão ---------- */
+function abrirFormEmissao() {
+  if (!state.token) { abrirModalLogin(); return; }
+  document.getElementById('form-emissao').classList.remove('hidden');
+  atualizarPreview();
+  document.getElementById('form-emissao').scrollIntoView({ behavior: 'smooth' });
+}
+function fecharFormEmissao() {
+  document.getElementById('form-emissao').classList.add('hidden');
+}
+
+function lerFormEmissao() {
+  const f = document.getElementById('emissao-form');
+  const d = new FormData(f);
+  const obj = {};
+  for (const [k, v] of d.entries()) obj[k] = v;
+  return obj;
+}
+
+function atualizarPreview() {
+  const dados = lerFormEmissao();
+  const r = calcularEmissao(dados);
+  document.getElementById('prev-e1').textContent    = fmt(r.e1, 4);
+  document.getElementById('prev-e2').textContent    = fmt(r.e2, 4);
+  document.getElementById('prev-e3').textContent    = fmt(r.e3, 4);
+  document.getElementById('prev-total').textContent = fmt(r.total, 4);
+  const st = document.getElementById('prev-status');
+  st.textContent = r.status;
+  st.className = 'font-bold ' + (r.status === 'ISENTO' ? 'text-mbv-green' :
+                                  r.status.startsWith('MONIT') ? 'text-amber-300' : 'text-red-400');
+}
+document.querySelectorAll('.emissao-num').forEach(el => el.addEventListener('input', atualizarPreview));
+
+document.getElementById('emissao-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const dados = lerFormEmissao();
+  const payload = {
+    empresa: dados.empresa,
+    cnpj_cpf: dados.cnpj_cpf,
+    ano_referencia: parseInt(dados.ano_referencia) || 2025,
+    e1_estacionario: +dados.e1_estacionario, e1_movel: +dados.e1_movel,
+    e1_processos: +dados.e1_processos, e1_fugitivas: +dados.e1_fugitivas,
+    e2_eletrica: +dados.e2_eletrica, e2_vapor: +dados.e2_vapor,
+    e3_cadeia: +dados.e3_cadeia, e3_transporte: +dados.e3_transporte, e3_residuos: +dados.e3_residuos,
+    cbe_disponiveis: +dados.cbe_disponiveis, crve_disponiveis: +dados.crve_disponiveis,
+  };
+  try {
+    const resp = await api('/api/v1/emissoes/', { method: 'POST', body: JSON.stringify(payload) });
+    toast(`Inventário registrado · ID ${resp.id} · ${resp.status_conformidade}`);
+    fecharFormEmissao();
+    document.getElementById('emissao-form').reset();
+    document.querySelector('[name=ano_referencia]').value = 2025;
+    await carregarEmissoes();
+    await refreshDashboard();
+  } catch (e) {
+    toast('Erro ao registrar: ' + e.message, 'error');
+  }
+});
+
+/* ---------- Carregar emissões ---------- */
+async function carregarEmissoes() {
+  const tbody = document.getElementById('tbl-emissoes');
+  if (!state.apiUrl) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Configure a URL da API em <strong>Configurações</strong>.</td></tr>';
+    return;
+  }
+  if (!state.token) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Faça login para ver os inventários.</td></tr>';
+    return;
+  }
+  try {
+    const data = await api('/api/v1/emissoes/?limit=200');
+    state.emissoes = data?.dados || [];
+    if (!state.emissoes.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum inventário cadastrado ainda.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = state.emissoes.map(em => `
+      <tr>
+        <td class="font-mono text-xs text-stone-500">#${em.id}</td>
+        <td class="font-semibold text-mbv-dark">${em.empresa || '—'}</td>
+        <td class="text-stone-600">${em.cnpj_cpf || '—'}</td>
+        <td>${em.ano_referencia}</td>
+        <td class="text-right font-mono">${fmt(em.total_tco2e, 4)}</td>
+        <td class="text-right font-mono ${em.deficit_tco2e > 0 ? 'text-red-700' : 'text-mbv-dark'}">${fmt(em.deficit_tco2e, 4)}</td>
+        <td>${badgeStatus(em.status_conformidade)}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state text-red-700">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+/* ---------- Form Certificado ---------- */
+function abrirFormCertificado() {
+  if (!state.token) { abrirModalLogin(); return; }
+  document.getElementById('form-certificado').classList.remove('hidden');
+}
+function fecharFormCertificado() { document.getElementById('form-certificado').classList.add('hidden'); }
+
+document.getElementById('cert-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = new FormData(ev.target);
+  const payload = {
+    titular: f.get('titular'),
+    area_hectares: parseFloat(f.get('area_hectares')),
+    bioma: f.get('bioma'),
+    atividade: f.get('atividade'),
+  };
+  try {
+    const r = await api('/api/v1/certificados/', { method: 'POST', body: JSON.stringify(payload) });
+    toast(`Certificado emitido · ${r.codigo || 'ok'}`);
+    fecharFormCertificado();
+    ev.target.reset();
+    await carregarCertificados();
+  } catch (e) {
+    toast('Erro ao emitir certificado: ' + e.message, 'error');
+  }
+});
+
+async function carregarCertificados() {
+  const tbody = document.getElementById('tbl-certificados');
+  if (!state.apiUrl || !state.token) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Faça login para ver os certificados.</td></tr>';
+    return;
+  }
+  try {
+    const data = await api('/api/v1/certificados/?limit=200');
+    const lista = Array.isArray(data) ? data : (data?.dados || []);
+    state.certificados = lista;
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum certificado emitido ainda.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(c => `
+      <tr>
+        <td class="font-mono text-xs">${c.codigo || '—'}</td>
+        <td class="font-semibold text-mbv-dark">${c.titular || '—'}</td>
+        <td>${c.bioma || '—'}</td>
+        <td class="text-stone-600">${c.atividade || '—'}</td>
+        <td class="text-right font-mono">${fmt(c.area_hectares ?? c.calculo_area, 2)}</td>
+        <td class="text-right font-mono text-mbv-dark">R$ ${fmt(c.valor_cota ?? c.calculo_valor_cota, 2)}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state text-red-700">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+/* ---------- Ativos ---------- */
+function carregarAtivos() {
+  const lista = state.emissoes;
+  const tbody = document.getElementById('tbl-ativos');
+  const totalCBE  = lista.reduce((s, e) => s + (+e.cbe_disponiveis || 0), 0);
+  const totalCRVE = lista.reduce((s, e) => s + (+e.crve_disponiveis || 0), 0);
+  document.getElementById('ativo-cbe-total').textContent  = fmt(totalCBE, 4);
+  document.getElementById('ativo-crve-total').textContent = fmt(totalCRVE, 4);
+  document.getElementById('ativo-cbe-operadores').textContent = lista.filter(e => +e.cbe_disponiveis > 0).length;
+  document.getElementById('ativo-crve-geradores').textContent = lista.filter(e => +e.crve_disponiveis > 0).length;
+  document.getElementById('ativo-cbe-media').textContent  = fmt(lista.length ? totalCBE / lista.length : 0, 4);
+  document.getElementById('ativo-crve-media').textContent = fmt(lista.length ? totalCRVE / lista.length : 0, 4);
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Cadastre inventários para ver as posições.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(em => {
+    const ativos = (+em.cbe_disponiveis || 0) + (+em.crve_disponiveis || 0);
+    const pos = ativos - (+em.total_tco2e || 0);
+    return `
+      <tr>
+        <td class="font-semibold text-mbv-dark">${em.empresa}</td>
+        <td class="text-right font-mono">${fmt(em.total_tco2e, 4)}</td>
+        <td class="text-right font-mono">${fmt(em.cbe_disponiveis, 4)}</td>
+        <td class="text-right font-mono">${fmt(em.crve_disponiveis, 4)}</td>
+        <td class="text-right font-mono ${pos < 0 ? 'text-red-700' : 'text-mbv-dark font-bold'}">${fmt(pos, 4)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ---------- Dashboard ---------- */
+let chartEscopos, chartStatus;
+
+async function refreshDashboard() {
+  await carregarEmissoes();
+  const lista = state.emissoes;
+
+  let e1 = 0, e2 = 0, e3 = 0;
+  let totalEm = 0, cbe = 0, crve = 0;
+  let stIsento = 0, stMonit = 0, stObrig = 0;
+
+  const detalhes = await Promise.all(
+    lista.slice(0, 20).map(em => api(`/api/v1/emissoes/${em.id}`).catch(() => null))
+  );
+  const detMap = {};
+  detalhes.forEach((d, i) => { if (d) detMap[lista[i].id] = d; });
+
+  for (const em of lista) {
+    const d = detMap[em.id] || em;
+    e1 += (+d.e1_estacionario || 0) + (+d.e1_movel || 0) + (+d.e1_processos || 0) + (+d.e1_fugitivas || 0);
+    e2 += (+d.e2_eletrica || 0) + (+d.e2_vapor || 0);
+    e3 += (+d.e3_cadeia || 0) + (+d.e3_transporte || 0) + (+d.e3_residuos || 0);
+    totalEm += +em.total_tco2e || 0;
+    cbe  += +d.cbe_disponiveis || 0;
+    crve += +d.crve_disponiveis || 0;
+    const s = em.status_conformidade || '';
+    if (s === 'ISENTO') stIsento++;
+    else if (s.startsWith('MONIT')) stMonit++;
+    else if (s) stObrig++;
+  }
+
+  const pos = (cbe + crve) - totalEm;
+  document.getElementById('kpi-total-emissoes').textContent = fmt(totalEm, 2);
+  document.getElementById('kpi-cbe').textContent  = fmt(cbe, 2);
+  document.getElementById('kpi-crve').textContent = fmt(crve, 2);
+  const kp = document.getElementById('kpi-deficit');
+  kp.textContent = fmt(Math.abs(pos), 2);
+  kp.className = pos < 0 ? 'text-red-700' : 'text-sbce-ok';
+  document.getElementById('kpi-deficit-label').textContent = pos < 0 ? `tCO₂e em DÉFICIT` : `tCO₂e em SUPERÁVIT`;
+
+  const tbR = document.getElementById('tbl-recent-emissoes');
+  if (!lista.length) {
+    const msg = state.token ? 'Sem inventários ainda. Cadastre o primeiro.' : 'Faça login para ver os inventários.';
+    tbR.innerHTML = `<tr><td colspan="6" class="empty-state">${msg}</td></tr>`;
+  } else {
+    tbR.innerHTML = lista.slice(0, 5).map(em => `
+      <tr>
+        <td class="font-semibold text-mbv-dark">${em.empresa}</td>
+        <td class="text-stone-600">${em.cnpj_cpf || '—'}</td>
+        <td>${em.ano_referencia}</td>
+        <td class="text-right font-mono">${fmt(em.total_tco2e, 2)}</td>
+        <td class="text-right font-mono ${em.deficit_tco2e > 0 ? 'text-red-700' : 'text-mbv-dark'}">${fmt(em.deficit_tco2e, 2)}</td>
+        <td>${badgeStatus(em.status_conformidade)}</td>
+      </tr>
+    `).join('');
+  }
+
+  drawCharts({ e1, e2, e3, stIsento, stMonit, stObrig });
+  document.getElementById('leg-isento').textContent = stIsento;
+  document.getElementById('leg-monit').textContent  = stMonit;
+  document.getElementById('leg-obrig').textContent  = stObrig;
+}
+
+function drawCharts(d) {
+  const ctxE = document.getElementById('chartEscopos').getContext('2d');
+  if (chartEscopos) chartEscopos.destroy();
+  chartEscopos = new Chart(ctxE, {
+    type: 'bar',
+    data: {
+      labels: ['Escopo 1', 'Escopo 2', 'Escopo 3'],
+      datasets: [{
+        data: [d.e1, d.e2, d.e3],
+        backgroundColor: ['#152417', '#8cbd41', '#b0a94e'],
+        borderRadius: 6, barThickness: 60,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false, responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('pt-BR') } },
+      },
+    },
+  });
+
+  const ctxS = document.getElementById('chartStatus').getContext('2d');
+  if (chartStatus) chartStatus.destroy();
+  const total = d.stIsento + d.stMonit + d.stObrig;
+  chartStatus = new Chart(ctxS, {
+    type: 'doughnut',
+    data: {
+      labels: ['Isento', 'Monitoramento', 'Conformidade total'],
+      datasets: [{
+        data: total ? [d.stIsento, d.stMonit, d.stObrig] : [1, 0, 0],
+        backgroundColor: ['#15803d', '#d97706', '#b91c1c'],
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false, responsive: true, cutout: '65%',
+      plugins: { legend: { display: false } },
+    },
+  });
+}
+
+/* ---------- Config form ---------- */
+document.getElementById('config-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  state.apiUrl = document.getElementById('cfg-api-url').value.trim().replace(/\/$/, '');
+  state.token  = document.getElementById('cfg-token').value.trim();
+  saveConfig();
+  document.getElementById('sample-base').textContent = state.apiUrl || 'http://localhost:8000';
+  document.getElementById('cfg-endpoint').textContent = state.apiUrl + '/health';
+  const ok = await checkHealth();
+  document.getElementById('cfg-health').textContent = ok ? 'OK · 200' : 'FALHOU';
+  document.getElementById('cfg-health').className = 'font-mono ' + (ok ? 'text-mbv-dark' : 'text-red-700');
+  toast(ok ? 'Backend acessível.' : 'Não foi possível alcançar o backend.', ok ? 'success' : 'error');
+  if (ok) { await carregarConfigSupabase(); await refreshDashboard(); }
+});
+
+/* ========================================================================
+ *  CALCULADORAS IA — Hub + acoplamento contextual + histórico
+ * ====================================================================== */
+
+const CALC_STATE = { catalogo: null, contextual: null };
+
+const FATORES_LOCAIS = {
+  combustiveis: {
+    'gasolina':         { co2: 2.212, ch4: 0.0004, n2o: 0.00014, uni: 'litro' },
+    'etanol':           { co2: 0.0,   ch4: 0.0003, n2o: 0.00011, uni: 'litro' },
+    'diesel':           { co2: 2.603, ch4: 0.0002, n2o: 0.00009, uni: 'litro' },
+    'gnv':              { co2: 1.937, ch4: 0.0066, n2o: 0.00003, uni: 'm³' },
+    'gas_natural':      { co2: 1.937, ch4: 0.0029, n2o: 0.00003, uni: 'm³' },
+    'glp':              { co2: 1.614, ch4: 0.0002, n2o: 0.00001, uni: 'kg' },
+    'oleo_combustivel': { co2: 3.123, ch4: 0.0003, n2o: 0.00012, uni: 'litro' },
+    'carvao_mineral':   { co2: 2.422, ch4: 0.0010, n2o: 0.00042, uni: 'kg' },
+    'biomassa':         { co2: 0.0,   ch4: 0.0300, n2o: 0.00400, uni: 'kg' },
+    'querosene':        { co2: 2.543, ch4: 0.0005, n2o: 0.00010, uni: 'litro' },
+  },
+  GWP_CH4: 27.9,
+  GWP_N2O: 273.0,
+  fatorEletricidade: 0.0907 / 1000,
+  refrigerantes: {
+    'r-22': 1810, 'r-134a': 1430, 'r-404a': 3922, 'r-410a': 2088,
+    'r-407c': 1774, 'r-32': 675, 'hfo-1234yf': 4,
+  },
+  cadeia: {
+    'agropecuaria': 0.320, 'industria_alimenticia': 0.180, 'industria_metalurgica': 0.420,
+    'industria_quimica': 0.350, 'industria_cimento': 0.850, 'comercio_varejo': 0.085,
+    'servicos_ti': 0.040, 'servicos_financeiros': 0.030, 'construcao_civil': 0.380,
+    'transporte_logistica': 0.290,
+  },
+  veiculosTkm: {
+    'caminhao_diesel': 0.000096, 'caminhao_leve': 0.000142, 'van_diesel': 0.000180,
+    'trem': 0.000028, 'navio': 0.000016, 'aviao_carga': 0.000800,
+  },
+};
+
+function previewLocal(tipo, dados) {
+  const F = FATORES_LOCAIS;
+  if (tipo === 'combustivel') {
+    const k = (dados.combustivel || '').toLowerCase().replace(/[ -]/g, '_');
+    const f = F.combustiveis[k];
+    if (!f) return null;
+    const q = +dados.quantidade || 0;
+    return q * (f.co2 + f.ch4 * F.GWP_CH4 + f.n2o * F.GWP_N2O);
+  }
+  if (tipo === 'eletricidade') return (+dados.kwh || 0) * F.fatorEletricidade;
+  if (tipo === 'refrigerante') {
+    const gwp = F.refrigerantes[(dados.refrigerante || '').toLowerCase()] || 1500;
+    return (+dados.kg_vazados || 0) * gwp / 1000;
+  }
+  if (tipo === 'cadeia') {
+    const f = F.cadeia[dados.setor] || 0.150;
+    return (+dados.valor_reais || 0) / 1000 * f;
+  }
+  if (tipo === 'transporte') {
+    const f = F.veiculosTkm[dados.veiculo] || 0.000096;
+    return (+dados.km || 0) * (+dados.toneladas || 1) * f;
+  }
+  return null;
+}
+
+async function carregarCatalogo() {
+  if (CALC_STATE.catalogo) return CALC_STATE.catalogo;
+  try {
+    const data = await api('/api/v1/calculadoras/catalogo');
+    CALC_STATE.catalogo = data;
+    return data;
+  } catch (e) {
+    toast('Erro ao carregar catálogo de calculadoras: ' + e.message, 'error');
+    return null;
+  }
+}
+
+async function iniciarCalculadoras() {
+  if (!state.token) { abrirModalLogin(); return; }
+  const cat = await carregarCatalogo();
+  if (!cat) return;
+
+  popularSelect('calc-comb-tipo', cat.combustiveis, c => c.id, c => `${c.label} (${c.unidade})`);
+  popularSelect('calc-ref-tipo', cat.refrigerantes, c => c.id, c => `${c.label} · GWP ${c.gwp.toLocaleString('pt-BR')}`);
+  popularSelect('calc-cad-setor', cat.setores_cadeia, c => c.id, c => c.label);
+  popularSelect('calc-trp-veic', cat.veiculos_transporte.map(v => ({id: v, label: v.replace(/_/g, ' ')})),
+                c => c.id, c => c.label);
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  setupCalcPreview('combustivel', ['calc-comb-tipo', 'calc-comb-qtd', 'calc-comb-cat'],
+                   () => ({ combustivel: gv('calc-comb-tipo'), quantidade: gv('calc-comb-qtd') }),
+                   'calc-comb-preview', 'calc-comb-result',
+                   () => atualizarUnidadeCombustivel());
+  setupCalcPreview('eletricidade', ['calc-ele-kwh'],
+                   () => ({ kwh: gv('calc-ele-kwh') }),
+                   'calc-ele-preview', 'calc-ele-result');
+  setupCalcPreview('refrigerante', ['calc-ref-tipo', 'calc-ref-kg'],
+                   () => ({ refrigerante: gv('calc-ref-tipo'), kg_vazados: gv('calc-ref-kg') }),
+                   'calc-ref-preview', 'calc-ref-result');
+  setupCalcPreview('cadeia', ['calc-cad-setor', 'calc-cad-valor'],
+                   () => ({ setor: gv('calc-cad-setor'), valor_reais: gv('calc-cad-valor') }),
+                   'calc-cad-preview', 'calc-cad-result');
+  setupCalcPreview('transporte', ['calc-trp-km', 'calc-trp-ton', 'calc-trp-veic'],
+                   () => ({ km: gv('calc-trp-km'), toneladas: gv('calc-trp-ton'), veiculo: gv('calc-trp-veic') }),
+                   'calc-trp-preview', 'calc-trp-result');
+
+  atualizarUnidadeCombustivel();
+}
+
+function gv(id) { return document.getElementById(id)?.value; }
+
+function popularSelect(id, items, valFn, labelFn) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = items.map(i => `<option value="${valFn(i)}">${labelFn(i)}</option>`).join('');
+}
+
+function atualizarUnidadeCombustivel() {
+  const tipo = gv('calc-comb-tipo');
+  const cat = CALC_STATE.catalogo;
+  if (!tipo || !cat) return;
+  const item = cat.combustiveis.find(c => c.id === tipo);
+  if (item) document.getElementById('calc-comb-unit').textContent = `tCO₂e por ${item.unidade}`;
+}
+
+function setupCalcPreview(tipo, ids, getDados, previewId, resultId, extraCb) {
+  const recalc = () => {
+    const d = getDados();
+    const v = previewLocal(tipo, d);
+    if (v === null || isNaN(v)) {
+      document.getElementById(previewId).textContent = '';
+      return;
+    }
+    document.getElementById(previewId).textContent = `Preview local: ${fmt(v, 6)} tCO₂e`;
+    if (extraCb) extraCb();
+  };
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', recalc);
+    if (el) el.addEventListener('change', recalc);
+  });
+  recalc();
+}
+
+async function executarCalc(tipo) {
+  if (!state.token) { abrirModalLogin(); return; }
+  const payload = montarPayload(tipo, false);
+  if (!payload) return;
+
+  const resultId = `calc-${tipo === 'combustivel' ? 'comb' :
+                          tipo === 'eletricidade' ? 'ele' :
+                          tipo === 'refrigerante' ? 'ref' :
+                          tipo === 'cadeia' ? 'cad' : 'trp'}-result`;
+  const elResult = document.getElementById(resultId);
+  elResult.textContent = '…';
+
+  try {
+    const data = await api(`/api/v1/calculadoras/${tipo}`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    elResult.textContent = fmt(data.tco2e, 4);
+    let msg = `${tipo}: ${fmt(data.tco2e, 4)} tCO₂e`;
+    if (payload.salvar) msg += ' · salvo no histórico';
+    toast(msg, 'success');
+  } catch (e) {
+    elResult.textContent = '—';
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function montarPayload(tipo, paraContexto) {
+  let p;
+  if (tipo === 'combustivel') {
+    p = {
+      combustivel: gv('calc-comb-tipo'),
+      quantidade: parseFloat(gv('calc-comb-qtd')) || 0,
+      categoria: gv('calc-comb-cat'),
+      escopo: gv('calc-comb-cat') === 'combustivel_movel' ? 1 : 1,
+      salvar: document.getElementById('calc-comb-save').checked,
+    };
+    if (p.quantidade <= 0) { toast('Informe quantidade > 0', 'warn'); return null; }
+  } else if (tipo === 'eletricidade') {
+    p = { kwh: parseFloat(gv('calc-ele-kwh')) || 0,
+          salvar: document.getElementById('calc-ele-save').checked };
+    if (p.kwh <= 0) { toast('Informe kWh > 0', 'warn'); return null; }
+  } else if (tipo === 'refrigerante') {
+    p = { refrigerante: gv('calc-ref-tipo'),
+          kg_vazados: parseFloat(gv('calc-ref-kg')) || 0,
+          salvar: document.getElementById('calc-ref-save').checked };
+    if (p.kg_vazados <= 0) { toast('Informe kg vazados > 0', 'warn'); return null; }
+  } else if (tipo === 'cadeia') {
+    p = { setor: gv('calc-cad-setor'),
+          valor_reais: parseFloat(gv('calc-cad-valor')) || 0,
+          salvar: document.getElementById('calc-cad-save').checked };
+    if (p.valor_reais <= 0) { toast('Informe valor > 0', 'warn'); return null; }
+  } else if (tipo === 'transporte') {
+    p = { km: parseFloat(gv('calc-trp-km')) || 0,
+          toneladas: parseFloat(gv('calc-trp-ton')) || 1,
+          veiculo: gv('calc-trp-veic'),
+          salvar: document.getElementById('calc-trp-save').checked };
+    if (p.km <= 0) { toast('Informe km > 0', 'warn'); return null; }
+  }
+  return p;
+}
+
+function trocarAbaCalc(aba) {
+  document.querySelectorAll('.calc-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.calcTab === aba);
+  });
+  document.getElementById('calc-aba-hub').classList.toggle('hidden', aba !== 'hub');
+  document.getElementById('calc-aba-historico').classList.toggle('hidden', aba !== 'historico');
+  if (aba === 'historico') carregarHistorico();
+}
+
+async function carregarHistorico() {
+  const tbody = document.getElementById('tbl-historico');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Carregando…</td></tr>';
+  try {
+    const data = await api('/api/v1/calculadoras/historico?limit=100');
+    const lista = data?.dados || [];
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum cálculo salvo ainda. Marque "Salvar no histórico" ao calcular.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(c => {
+      const dt = c.criado_em ? new Date(c.criado_em).toLocaleString('pt-BR') : '—';
+      const entrada = c.entrada ? Object.entries(c.entrada).map(([k,v]) => `${k}=${v}`).join(', ') : '—';
+      const aplicado = c.aplicado_em_emissao_id
+        ? `<span class="text-xs">#${c.aplicado_em_emissao_id} → ${c.campo_destino || '?'}</span>`
+        : '<span class="text-xs text-stone-400">—</span>';
+      return `
+        <tr>
+          <td class="text-xs text-stone-500">${dt}</td>
+          <td><span class="font-semibold">${c.tipo}</span></td>
+          <td><span class="escopo-tag e${c.escopo}">E${c.escopo}</span></td>
+          <td class="text-xs text-stone-600">${entrada}</td>
+          <td class="text-right font-mono text-mbv-dark font-semibold">${fmt(c.tco2e, 6)}</td>
+          <td>${aplicado}</td>
+          <td><button onclick="removerHistorico(${c.id})" class="text-red-500 hover:text-red-700 text-xs">
+            <i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+        </tr>`;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state text-red-700">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+async function removerHistorico(id) {
+  if (!confirm('Remover este cálculo do histórico?')) return;
+  try {
+    await api(`/api/v1/calculadoras/historico/${id}`, { method: 'DELETE' });
+    toast('Cálculo removido.', 'success');
+    carregarHistorico();
+  } catch (e) {
+    toast('Erro ao remover: ' + e.message, 'error');
+  }
+}
+
+const CTX_TEMPLATES = {
+  'combustivel-estacionario': {
+    titulo: 'Calcular combustível estacionário',
+    endpoint: 'combustivel',
+    extras: { categoria: 'combustivel_estacionario', escopo: 1 },
+    fields: [
+      { id: 'combustivel', label: 'Tipo', type: 'select', source: 'combustiveis' },
+      { id: 'quantidade',  label: 'Quantidade', type: 'number', step: '0.01' },
+    ],
+  },
+  'combustivel-movel': {
+    titulo: 'Calcular combustível móvel (frota)',
+    endpoint: 'combustivel',
+    extras: { categoria: 'combustivel_movel', escopo: 1 },
+    fields: [
+      { id: 'combustivel', label: 'Tipo', type: 'select', source: 'combustiveis' },
+      { id: 'quantidade',  label: 'Quantidade', type: 'number', step: '0.01' },
+    ],
+  },
+  'eletricidade': {
+    titulo: 'Calcular energia elétrica',
+    endpoint: 'eletricidade',
+    extras: {},
+    fields: [{ id: 'kwh', label: 'Consumo (kWh)', type: 'number', step: '0.01' }],
+  },
+  'refrigerante': {
+    titulo: 'Calcular refrigerante (fugitivo)',
+    endpoint: 'refrigerante',
+    extras: {},
+    fields: [
+      { id: 'refrigerante', label: 'Tipo', type: 'select', source: 'refrigerantes' },
+      { id: 'kg_vazados',   label: 'Kg vazados', type: 'number', step: '0.001' },
+    ],
+  },
+  'cadeia': {
+    titulo: 'Calcular cadeia de fornecimento',
+    endpoint: 'cadeia',
+    extras: {},
+    fields: [
+      { id: 'setor',       label: 'Setor', type: 'select', source: 'setores_cadeia' },
+      { id: 'valor_reais', label: 'Valor compras (R$)', type: 'number', step: '0.01' },
+    ],
+  },
+  'transporte': {
+    titulo: 'Calcular transporte rodoviário',
+    endpoint: 'transporte',
+    extras: {},
+    fields: [
+      { id: 'km',        label: 'Distância (km)', type: 'number', step: '0.1' },
+      { id: 'toneladas', label: 'Carga (ton)',    type: 'number', step: '0.1', valor: '1' },
+      { id: 'veiculo',   label: 'Veículo',        type: 'select', source: 'veiculos_transporte' },
+    ],
+  },
+};
+
+async function abrirCalcContextual(tipo, campoDestino) {
+  if (!state.token) { abrirModalLogin(); return; }
+  const cat = await carregarCatalogo();
+  if (!cat) return;
+
+  const tpl = CTX_TEMPLATES[tipo];
+  if (!tpl) return;
+
+  CALC_STATE.contextual = { tipo, campoDestino, ultimoResultado: null };
+
+  document.getElementById('calc-modal-title').textContent = tpl.titulo;
+  document.getElementById('calc-modal-target').textContent = campoDestino;
+
+  const form = document.getElementById('calc-modal-form');
+  form.innerHTML = tpl.fields.map(f => {
+    if (f.type === 'select') {
+      const items = cat[f.source];
+      const opts = (items || []).map(i => {
+        if (typeof i === 'string') return `<option value="${i}">${i.replace(/_/g, ' ')}</option>`;
+        return `<option value="${i.id}">${i.label || i.id}</option>`;
+      }).join('');
+      return `<div><label class="field-label">${f.label}</label>
+              <select class="field-input" id="ctx-${f.id}">${opts}</select></div>`;
+    }
+    return `<div><label class="field-label">${f.label}</label>
+            <input class="field-input" id="ctx-${f.id}" type="number" step="${f.step || '0.01'}" value="${f.valor || ''}" /></div>`;
+  }).join('');
+
+  document.getElementById('calc-modal-result').classList.add('hidden');
+  document.getElementById('btn-aplicar-contextual').classList.add('hidden');
+  document.getElementById('calc-modal-save').checked = false;
+  document.getElementById('calc-modal').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function fecharCalcContextual() {
+  document.getElementById('calc-modal').classList.add('hidden');
+  CALC_STATE.contextual = null;
+}
+
+async function calcularContextual() {
+  const ctx = CALC_STATE.contextual;
+  if (!ctx) return;
+  const tpl = CTX_TEMPLATES[ctx.tipo];
+  const payload = { ...tpl.extras };
+
+  for (const f of tpl.fields) {
+    const val = document.getElementById(`ctx-${f.id}`).value;
+    payload[f.id] = f.type === 'number' ? parseFloat(val) || 0 : val;
+  }
+  payload.salvar = document.getElementById('calc-modal-save').checked;
+  payload.campo_destino = ctx.campoDestino;
+
+  try {
+    const data = await api(`/api/v1/calculadoras/${tpl.endpoint}`, {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    ctx.ultimoResultado = data.tco2e;
+    document.getElementById('calc-modal-value').textContent = fmt(data.tco2e, 6);
+    document.getElementById('calc-modal-result').classList.remove('hidden');
+    document.getElementById('btn-aplicar-contextual').classList.remove('hidden');
+    if (payload.salvar) toast('Cálculo salvo no histórico.', 'success');
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+function aplicarContextual() {
+  const ctx = CALC_STATE.contextual;
+  if (!ctx || ctx.ultimoResultado === null) return;
+  const input = document.querySelector(`[name="${ctx.campoDestino}"]`);
+  if (input) {
+    input.value = ctx.ultimoResultado.toFixed(6);
+    input.dispatchEvent(new Event('input'));
+    toast(`Valor ${fmt(ctx.ultimoResultado, 4)} aplicado em ${ctx.campoDestino}`, 'success');
+  }
+  fecharCalcContextual();
+}
+
+/* ========================================================================
+ *  IMPORTAR ECF — preenche o Inventário GEE a partir do imposto de renda
+ * ====================================================================== */
+const ECF_STATE = { ultimo: null };
+
+function abrirModalECF() {
+  if (!state.token) { abrirModalLogin(); return; }
+  ECF_STATE.ultimo = null;
+  document.getElementById('ecf-file-inv').value = '';
+  document.getElementById('ecf-modal-result').classList.add('hidden');
+  document.getElementById('ecf-modal-summary').innerHTML = '';
+  document.getElementById('btn-aplicar-ecf').classList.add('hidden');
+  document.getElementById('ecf-modal').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function fecharModalECF() {
+  document.getElementById('ecf-modal').classList.add('hidden');
+}
+
+function ecfStatusBadge(total) {
+  let st, c;
+  if (total < 10000) { st = 'ISENTO'; c = 'badge-isento'; }
+  else if (total <= 25000) { st = 'MONITORAMENTO OBRIGATÓRIO'; c = 'badge-monit'; }
+  else { st = 'CONFORMIDADE TOTAL OBRIGATÓRIA'; c = 'badge-obrig'; }
+  return `<span class="badge ${c}">${st}</span>`;
+}
+
+async function lerECFInventario() {
+  if (!state.token) { abrirModalLogin(); return; }
+  const input = document.getElementById('ecf-file-inv');
+  const file = input.files && input.files[0];
+  if (!file) { toast('Selecione o arquivo .txt da ECF.', 'warn'); return; }
+  if (!state.apiUrl) { toast('Configure a URL da API.', 'error'); return; }
+
+  const btn = document.getElementById('btn-ler-ecf');
+  btn.disabled = true;
+  const txtOrig = btn.innerHTML;
+  btn.innerHTML = 'Lendo…';
+
+  try {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    const resp = await fetch(`${state.apiUrl}/api/v1/emissoes/importar-ecf?calcular=true`, {
+      method: 'POST',
+      headers: state.token ? { 'Authorization': `Bearer ${state.token}` } : {},
+      body: fd,
+    });
+    if (resp.status === 401) {
+      toast('Sessão expirada. Faça login novamente.', 'warn');
+      state.token = ''; state.user = null; saveConfig(); atualizarUIUsuario(); abrirModalLogin();
+      return;
+    }
+    if (!resp.ok) {
+      let d = ''; try { d = (await resp.json()).detail || ''; } catch (e) {}
+      throw new Error(`${resp.status}${d ? ' — ' + d : ''}`);
+    }
+    const data = await resp.json();
+    ECF_STATE.ultimo = data;
+    mostrarResumoECF(data);
+  } catch (e) {
+    toast('Erro ao importar ECF: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = txtOrig;
+  }
+}
+
+function mostrarResumoECF(data) {
+  const ecf = data.ecf || {};
+  const ci = data.cnpj_info || {};
+  const linhas = [];
+  linhas.push(`<div><b>${ecf.razao_social || '—'}</b> · CNPJ ${ecf.cnpj || '—'}</div>`);
+  linhas.push(`<div class="text-stone-500">Período ${ecf.periodo || '—'} · regime ${ecf.regime || '—'}</div>`);
+  linhas.push(`<div>Receita bruta: <b>R$ ${fmt(ecf.receita_bruta, 2)}</b>`
+    + (ecf.gasto_energia_eletrica ? ` · Energia: R$ ${fmt(ecf.gasto_energia_eletrica, 2)}` : '')
+    + (ecf.gasto_combustivel ? ` · Combustível: R$ ${fmt(ecf.gasto_combustivel, 2)}` : '') + `</div>`);
+  if (data.categoria_sugerida) {
+    linhas.push(`<div>Categoria (CNAE ${ci.cnae_fiscal || '—'}): <b>${ci.categoria_rotulo || data.categoria_sugerida}</b></div>`);
+  } else {
+    linhas.push(`<div class="text-amber-700">CNAE sem mapeamento automático — abra "Inventário por Balanço" para escolher a categoria manualmente.</div>`);
+  }
+  if (ecf.avisos && ecf.avisos.length) {
+    linhas.push(`<div class="text-amber-700">⚠ ${ecf.avisos.join(' · ')}</div>`);
+  }
+
+  let totaisHtml = '';
+  if (data.calculo) {
+    const r = data.calculo;
+    totaisHtml = `
+      <div class="bg-mbv-dark text-white rounded-lg p-3 grid grid-cols-4 gap-2 text-sm mt-3">
+        <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Escopo 1</div><div class="font-mono">${fmt(r.escopo1_total, 4)}</div></div>
+        <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Escopo 2</div><div class="font-mono">${fmt(r.escopo2_total, 4)}</div></div>
+        <div><div class="text-mbv-olive text-[10px] uppercase tracking-wider font-bold">Escopo 3</div><div class="font-mono">${fmt(r.escopo3_total, 4)}</div></div>
+        <div><div class="text-mbv-green text-[10px] uppercase tracking-wider font-bold">Total</div><div class="font-mono text-mbv-green">${fmt(r.total_tco2e, 4)}</div></div>
+      </div>
+      <div class="mt-2">${ecfStatusBadge(r.total_tco2e)}</div>`;
+    document.getElementById('btn-aplicar-ecf').classList.remove('hidden');
+  } else {
+    totaisHtml = `<div class="text-amber-700 mt-2">${data.aviso_calculo || 'Não foi possível calcular automaticamente.'}</div>`;
+    document.getElementById('btn-aplicar-ecf').classList.add('hidden');
+  }
+
+  document.getElementById('ecf-modal-summary').innerHTML = linhas.join('') + totaisHtml;
+  document.getElementById('ecf-modal-result').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function aplicarECFnoInventario() {
+  const data = ECF_STATE.ultimo;
+  if (!data || !data.calculo) { toast('Nada para aplicar.', 'warn'); return; }
+
+  abrirFormEmissao();
+  const form = document.getElementById('emissao-form');
+
+  const ecf = data.ecf || {};
+  if (form.empresa)        form.empresa.value        = ecf.razao_social || '';
+  if (form.cnpj_cpf)       form.cnpj_cpf.value       = ecf.cnpj || '';
+  if (form.ano_referencia) form.ano_referencia.value = ecf.ano_referencia || 2025;
+
+  const campos = data.calculo.campos_emissao || {};
+  Object.entries(campos).forEach(([k, v]) => {
+    if (form[k] !== undefined && form[k] !== null) form[k].value = Number(v).toFixed(4);
+  });
+
+  atualizarPreview();
+  fecharModalECF();
+  toast('Inventário preenchido a partir da ECF. Revise e clique em "Enviar ao backend".', 'success');
+  document.getElementById('form-emissao').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ========================================================================
+ *  CONSULTA AGRO — autopreenche o Certificado Rural a partir do CNPJ/CPF
+ *  Chama GET /api/v1/certificados/consultar-documento/{doc}
+ * ====================================================================== */
+function _agroSetSelect(sel, valor) {
+  if (!sel || !valor) return false;
+  const alvo = String(valor).trim();
+  const opt = Array.from(sel.options).find(o => o.value === alvo || o.text.trim() === alvo);
+  if (opt) { sel.value = opt.value; return true; }
+  return false;
+}
+
+function _agroStatusPill(st) {
+  const map = {
+    ok:           ['#15803d', '#dcfce7', 'ok'],
+    indisponivel: ['#b45309', '#fef3c7', 'indisponível'],
+    requer_car:   ['#b45309', '#fef3c7', 'requer Nº CAR'],
+    nao_integrado:['#6b7280', '#f3f4f6', 'não integrado'],
+  };
+  const [cor, bg, txt] = map[st] || ['#6b7280', '#f3f4f6', st || '—'];
+  return `<span style="display:inline-block;padding:.05rem .45rem;border-radius:999px;`
+       + `font-size:.62rem;font-weight:700;color:${cor};background:${bg};">${txt}</span>`;
+}
+
+async function buscarDadosAgro() {
+  if (!state.token) { abrirModalLogin(); return; }
+  const doc = (document.getElementById('agro-doc').value || '').replace(/\D/g, '');
+  const info = document.getElementById('agro-doc-info');
+  info.style.display = 'block';
+
+  if (doc.length !== 11 && doc.length !== 14) {
+    info.innerHTML = '<span style="color:#b91c1c">Informe um CNPJ (14 dígitos) ou CPF (11 dígitos).</span>';
+    return;
+  }
+
+  const btn = document.getElementById('agro-doc-btn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Consultando órgãos…';
+  info.innerHTML = 'Consultando Receita, IBGE e órgãos ambientais…';
+
+  try {
+    const d = await api('/api/v1/certificados/consultar-documento/' + doc);
+    const form = document.getElementById('cert-form');
+    const campos = d.campos_certificado || {};
+
+    const preenchidos = [];
+    if (campos.titular && form.titular) { form.titular.value = campos.titular; preenchidos.push('titular'); }
+    if (campos.bioma && form.bioma && _agroSetSelect(form.bioma, campos.bioma)) preenchidos.push('bioma');
+    if (campos.atividade && form.atividade && _agroSetSelect(form.atividade, campos.atividade)) preenchidos.push('atividade');
+    if (campos.area_hectares != null && form.area_hectares) { form.area_hectares.value = campos.area_hectares; preenchidos.push('área'); }
+
+    const cab = `<div style="color:#152417;font-weight:700;margin-bottom:.35rem">`
+      + `${d.titular || '(titular não disponível por este documento)'} `
+      + `<span style="font-weight:500;color:#6b7280">· ${d.tipo_documento}`
+      + `${d.municipio ? ' · ' + d.municipio + '/' + d.uf : ''}`
+      + `${d.cnae ? ' · CNAE ' + d.cnae : ''}</span></div>`;
+
+    const fontes = (d.fontes || []).map(s =>
+      `<div style="margin:.15rem 0">${_agroStatusPill(s.status)} <b>${s.orgao}</b> — ${s.detalhe}</div>`
+    ).join('');
+
+    const avisos = (d.avisos || []).map(a =>
+      `<div style="color:#b45309;margin-top:.25rem">⚠ ${a}</div>`
+    ).join('');
+
+    info.innerHTML = cab + fontes + avisos;
+
+    if (preenchidos.length) {
+      toast('Preenchido automaticamente: ' + preenchidos.join(', ') + '. Confira e complete a área preservada.', 'success');
+    } else {
+      toast('Documento consultado, mas não há dados públicos para autopreencher. Preencha manualmente.', 'warn');
+    }
+  } catch (e) {
+    info.innerHTML = '<span style="color:#b91c1c">Erro: ' + (e.message || e) + '</span>';
+    toast('Erro ao consultar órgãos: ' + (e.message || e), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+/* ---------- Inicialização ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+  lucide.createIcons();
+  loadConfig();
+
+  document.getElementById('cfg-endpoint').textContent = state.apiUrl + '/health';
+  document.getElementById('sample-base').textContent = state.apiUrl;
+  const apiOk = await checkHealth();
+
+  if (!apiOk) {
+    document.getElementById('cfg-health').textContent = 'FALHOU';
+    drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
+    toast('Backend offline em ' + state.apiUrl + ' — inicie com: python start_api.py', 'error');
+    setTimeout(() => abrirModalLogin(), 300);
+    return;
+  }
+
+  document.getElementById('cfg-health').textContent = 'OK · 200';
+  document.getElementById('cfg-health').className = 'font-mono text-mbv-dark';
+
+  const supaOk = await carregarConfigSupabase();
+  if (!supaOk) {
+    console.warn('Config Supabase não disponível.');
+    toast('Backend não devolveu config Supabase. Verifique .env e o endpoint /api/v1/public-config.', 'warn');
+  }
+
+  if (state.token && state.user) {
+    atualizarUIUsuario();
+    drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
+    await refreshDashboard();
+  } else {
+    drawCharts({ e1: 0, e2: 0, e3: 0, stIsento: 0, stMonit: 0, stObrig: 0 });
+    setTimeout(() => abrirModalLogin(), 200);
+  }
+});
+</script>
+</body>
+</html>

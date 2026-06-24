@@ -144,7 +144,7 @@ def consultar_historico():
 # INTERFACE PRINCIPAL (TELA)
 # ==========================================
 janela = tk.Tk()
-janela.title("Movimento Brasil Verde - ERP")
+janela.title("ERP CarbonFree 15.042")
 janela.geometry("500x450")
 
 tk.Label(janela, text="Sustentabilidade e Conformidade", font=("Arial", 12, "bold"), fg="green").pack(pady=10)
