@@ -2,7 +2,7 @@
 """
 patch_sidebar_mrv.py
 
-Adiciona o link "Fechamento Mensal MRV" (→ /mrv) na sidebar do index.html,
+Adiciona o link "Fechamento Mensal MRV" (→ http://localhost:8000/mrv) na sidebar do index.html,
 logo abaixo do item "Inventário GEE".
 
 Uso:
@@ -12,7 +12,7 @@ Uso:
 Seguro:
   • Faz backup em index.html.bak-mrv antes de gravar.
   • Aborta (sem alterar nada) se o ponto de ancoragem não existir exatamente 1x.
-  • Aborta se o patch já tiver sido aplicado (procura href="/mrv").
+  • Aborta se o patch já tiver sido aplicado (procura href="http://localhost:8000/mrv").
 """
 
 import sys
@@ -27,7 +27,7 @@ ANCHOR = (
 # A âncora + a nova linha logo abaixo, com a mesma indentação.
 ADD = (
     ANCHOR
-    + '\n      <a class="sidebar-link" href="/mrv">'
+    + '\n      <a class="sidebar-link" href="http://localhost:8000/mrv">'
       '<i data-lucide="calendar-check"></i> Fechamento Mensal MRV</a>'
 )
 
@@ -40,8 +40,8 @@ def aplicar(caminho: str) -> int:
     with open(caminho, "r", encoding="utf-8") as f:
         html = f.read()
 
-    if 'href="/mrv"' in html:
-        print('O link já existe (encontrei href="/mrv"). Nada a fazer.')
+    if 'href="http://localhost:8000/mrv"' in html:
+        print('O link já existe (encontrei href="http://localhost:8000/mrv"). Nada a fazer.')
         return 0
 
     n = html.count(ANCHOR)

@@ -376,7 +376,7 @@
       <div class="px-3 pb-2 pt-1 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Operação</div>
       <a class="sidebar-link active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
       <a class="sidebar-link" data-view="emissoes"><i data-lucide="factory"></i> Inventário GEE</a>
-      <a class="sidebar-link" href="/mrv"><i data-lucide="calendar-check"></i> Fechamento Mensal MRV</a>
+      <a class="sidebar-link" href="http://localhost:8000/mrv"><i data-lucide="calendar-check"></i> Fechamento Mensal MRV</a>
       <a class="sidebar-link" data-view="calculadoras"><i data-lucide="calculator"></i> Calculadoras IA</a>
       <a class="sidebar-link" data-view="ativos"><i data-lucide="coins"></i> Ativos CBE / CRVE</a>
 
@@ -1843,7 +1843,7 @@ function navigateTo(view) {
   if (view === 'calculadoras') iniciarCalculadoras();
 }
 
-document.querySelectorAll('.sidebar-link').forEach(a => {
+document.querySelectorAll('.sidebar-link[data-view]').forEach(a => {
   a.addEventListener('click', () => navigateTo(a.dataset.view));
 });
 
