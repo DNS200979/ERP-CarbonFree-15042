@@ -353,6 +353,92 @@
     cursor: pointer; transition: all .15s ease;
   }
   .calc-tab.active { color: var(--mbv-dark); border-bottom-color: var(--mbv-green); }
+
+  /* ====== Calculadoras — agrupamento por escopo + cards uniformes ====== */
+  .scope-group { margin-bottom: 1.6rem; }
+  .scope-group__head {
+    display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem;
+    padding-bottom: 0.5rem; border-bottom: 2px solid #e7e5d8;
+  }
+  .scope-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 9px; font-size: 0.78rem;
+    font-weight: 800; letter-spacing: -0.5px; flex-shrink: 0;
+  }
+  .scope-badge.s1 { background: var(--mbv-dark); color: #d4e9a8; }
+  .scope-badge.s2 { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .scope-badge.s3 { background: #fef3c7; color: #854d0e; border: 1px solid #fde68a; }
+  .scope-group__title { font-family: 'Fraunces', serif; font-size: 1.05rem; color: var(--mbv-dark); line-height: 1.1; }
+  .scope-group__sub   { font-size: 0.72rem; color: #8a8a78; }
+  .scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1rem; }
+
+  .calc-card { height: 100%; }
+  .calc-card__body { display: flex; flex-direction: column; gap: 0.55rem; flex: 1 1 auto; }
+  .calc-fonte {
+    display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.15rem;
+    font-size: 0.62rem; color: #8a8a78; line-height: 1.25;
+  }
+  .calc-fonte i { width: 11px; height: 11px; }
+  .tier-pill {
+    display: inline-block; padding: 0.1rem 0.45rem; border-radius: 6px;
+    font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    background: #eef3e3; color: #5a8527; border: 1px solid #dce8c4;
+  }
+  .calc-gases { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .gas-chip {
+    display: inline-flex; align-items: baseline; gap: 0.25rem;
+    background: #f2f1e8; border: 1px solid #e3e1d2; border-radius: 6px;
+    padding: 0.15rem 0.4rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: #5b6b5e;
+  }
+  .gas-chip b { color: var(--mbv-dark); font-weight: 700; }
+  .gas-chip.bio { background: #ecfccb; border-color: #d9f99d; color: #4d7c0f; }
+  .btn-mem {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+    width: 100%; padding: 0.45rem; border-radius: 8px; cursor: pointer;
+    font-size: 0.74rem; font-weight: 600; color: var(--mbv-dark);
+    background: #fff; border: 1px dashed #c9c6b2; transition: all .15s ease;
+  }
+  .btn-mem:hover { background: #f6f7ee; border-color: var(--mbv-green); }
+  .btn-mem[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+  /* ====== Modal: Memória de cálculo (evidência ISO 14064-3) ====== */
+  #mem-modal {
+    position: fixed; inset: 0; z-index: 120;
+    background: rgba(12,23,14,.72); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+    animation: modalFade .2s ease;
+  }
+  #mem-modal.hidden { display: none; }
+  .mem-card {
+    background: #fff; border-radius: 14px; max-width: 640px; width: 100%;
+    max-height: 88vh; display: flex; flex-direction: column;
+    box-shadow: 0 24px 70px -12px rgba(0,0,0,.45); animation: cardSlide .25s ease; overflow: hidden;
+  }
+  .mem-head {
+    background: var(--mbv-dark); color: #fff; padding: 1rem 1.3rem;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+  }
+  .mem-body { padding: 1.2rem 1.3rem; overflow-y: auto; }
+  .mem-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem; margin-bottom: 1rem; }
+  .mem-meta__item { background: #f6f7ee; border: 1px solid #e7e5d8; border-radius: 9px; padding: 0.5rem 0.65rem; }
+  .mem-meta__k { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8a8a78; font-weight: 700; }
+  .mem-meta__v { font-size: 0.82rem; color: var(--mbv-dark); font-weight: 600; margin-top: 0.1rem; }
+  .mem-steps {
+    background: #0e170e; color: #d4e9a8; border-radius: 10px; padding: 1rem 1.1rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; line-height: 1.7;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .mem-steps .lbl { color: var(--mbv-green); font-weight: 700; }
+  .mem-step { display: block; }
+  .mem-total-wrap {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    margin-top: 1rem; padding: 0.7rem 0.9rem; border-radius: 10px;
+    background: #eef3e3; border: 1px solid #dce8c4;
+  }
+  .mem-total-wrap > span:first-child {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5a8527; font-weight: 700;
+  }
+  .mem-total { font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; font-weight: 700; color: var(--mbv-dark); }
 </style>
 </head>
 <body class="agro-texture">
@@ -715,7 +801,7 @@
       <section id="view-calculadoras" class="view">
         <div class="mb-6">
           <h1 class="section-title">Calculadoras IA</h1>
-          <p class="section-subtitle">Converta consumos físicos (litros, kWh, km) em tCO₂e usando fatores IPCC AR6 + MCTI 2024.</p>
+          <p class="section-subtitle">Converta consumos físicos (litros, kWh, km) em tCO₂e com método auditável ISO 14064-1 / GHG Protocol Brasil: detalhamento por gás, fator com fonte oficial, GWP (AR6/AR5), Tier e memória de cálculo verificável.</p>
         </div>
 
         <div class="flex gap-1 mb-5 border-b border-stone-200">
@@ -729,182 +815,270 @@
 
         <div id="calc-aba-hub">
           <div class="bg-mbv-dark text-white rounded-xl p-4 mb-5 flex items-start gap-3">
-            <i data-lucide="info" class="w-5 h-5 text-mbv-green shrink-0 mt-0.5"></i>
+            <i data-lucide="shield-check" class="w-5 h-5 text-mbv-green shrink-0 mt-0.5"></i>
             <div class="text-sm text-mbv-lime leading-relaxed">
-              Cada calculadora pode ser usada de forma independente, ou clicada via botão 🧮 ao lado de cada
-              campo do <strong>Inventário GEE</strong> para preenchimento automático. Marque
-              <strong>"Salvar"</strong> para registrar o cálculo no histórico do usuário.
+              Cálculo no padrão <strong>auditável (ISO 14064)</strong>: cada resultado mostra a quebra por gás
+              (CO₂ · CH₄ · N₂O), a <strong>fonte oficial do fator</strong>, o conjunto de GWP e o nível metodológico (Tier).
+              Clique em <strong>"Memória de cálculo"</strong> para ver o passo-a-passo que o verificador (OVV) lê.
+              Use o botão 🧮 ao lado de cada campo do <strong>Inventário GEE</strong> para injetar o resultado.
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
-            <div class="calc-card">
-              <div class="calc-card-header">
-                <div class="calc-icon e1">⛽</div>
-                <div class="flex-1">
-                  <div class="font-display text-base text-mbv-dark">Combustível</div>
-                  <span class="escopo-tag e1">Escopo 1</span>
-                </div>
+          <!-- ============ ESCOPO 1 ============ -->
+          <div class="scope-group">
+            <div class="scope-group__head">
+              <span class="scope-badge s1">E1</span>
+              <div>
+                <div class="scope-group__title">Escopo 1 — Emissões diretas</div>
+                <div class="scope-group__sub">Fontes da própria operação: combustão e gases fugitivos</div>
               </div>
-              <div class="space-y-2">
-                <div>
-                  <label class="field-label">Tipo</label>
-                  <select id="calc-comb-tipo" class="field-input"></select>
+            </div>
+            <div class="scope-grid">
+
+              <div class="calc-card">
+                <div class="calc-card-header">
+                  <div class="calc-icon e1">⛽</div>
+                  <div class="flex-1">
+                    <div class="font-display text-base text-mbv-dark">Combustível</div>
+                    <span class="escopo-tag e1">Escopo 1</span>
+                  </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="calc-card__body">
                   <div>
-                    <label class="field-label">Quantidade</label>
-                    <input id="calc-comb-qtd" class="field-input" type="number" step="0.01" placeholder="0" />
+                    <label class="field-label">Tipo</label>
+                    <select id="calc-comb-tipo" class="field-input"></select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="field-label">Quantidade</label>
+                      <input id="calc-comb-qtd" class="field-input" type="number" step="0.01" placeholder="0" />
+                    </div>
+                    <div>
+                      <label class="field-label">Categoria</label>
+                      <select id="calc-comb-cat" class="field-input">
+                        <option value="combustivel_estacionario">Estacionário</option>
+                        <option value="combustivel_movel">Móvel/Frota</option>
+                      </select>
+                    </div>
                   </div>
                   <div>
-                    <label class="field-label">Categoria</label>
-                    <select id="calc-comb-cat" class="field-input">
-                      <option value="combustivel_estacionario">Estacionário</option>
-                      <option value="combustivel_movel">Móvel/Frota</option>
+                    <label class="field-label">Conjunto GWP</label>
+                    <select id="calc-comb-gwp" class="field-input">
+                      <option value="AR6">IPCC AR6 (recomendado)</option>
+                      <option value="AR5">IPCC AR5</option>
                     </select>
                   </div>
+                  <div id="calc-comb-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                  <div class="calc-fonte" id="calc-comb-fonte"><i data-lucide="book-marked"></i><span>IPCC / GHG Protocol Brasil</span></div>
                 </div>
-                <div id="calc-comb-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                <div class="calc-result">
+                  <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive" id="calc-comb-unit">tCO₂e</div></div>
+                  <div class="value" id="calc-comb-result">—</div>
+                </div>
+                <div class="calc-gases" id="calc-comb-gases"></div>
+                <label class="flex items-center gap-2 text-xs text-stone-600">
+                  <input type="checkbox" id="calc-comb-save" class="accent-mbv-green" /> Salvar no histórico
+                </label>
+                <button onclick="executarCalc('combustivel')" class="btn-primary w-full justify-center text-sm">
+                  <i data-lucide="play" class="w-4 h-4"></i> Calcular
+                </button>
+                <button id="calc-comb-mem" class="btn-mem" disabled onclick="abrirMemoria('combustivel')">
+                  <i data-lucide="file-search" class="w-4 h-4"></i> Memória de cálculo
+                </button>
               </div>
-              <div class="calc-result">
-                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive" id="calc-comb-unit">tCO₂e</div></div>
-                <div class="value" id="calc-comb-result">—</div>
-              </div>
-              <label class="flex items-center gap-2 text-xs text-stone-600">
-                <input type="checkbox" id="calc-comb-save" class="accent-mbv-green" /> Salvar no histórico
-              </label>
-              <button onclick="executarCalc('combustivel')" class="btn-primary w-full justify-center text-sm">
-                <i data-lucide="play" class="w-4 h-4"></i> Calcular
-              </button>
-            </div>
 
-            <div class="calc-card">
-              <div class="calc-card-header">
-                <div class="calc-icon e2">⚡</div>
-                <div class="flex-1">
-                  <div class="font-display text-base text-mbv-dark">Energia Elétrica</div>
-                  <span class="escopo-tag e2">Escopo 2</span>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div>
-                  <label class="field-label">Consumo (kWh)</label>
-                  <input id="calc-ele-kwh" class="field-input" type="number" step="0.01" placeholder="0" />
-                </div>
-                <div id="calc-ele-preview" class="text-[11px] text-stone-500 font-mono"></div>
-              </div>
-              <div class="calc-result">
-                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · fator SIN</div></div>
-                <div class="value" id="calc-ele-result">—</div>
-              </div>
-              <label class="flex items-center gap-2 text-xs text-stone-600">
-                <input type="checkbox" id="calc-ele-save" class="accent-mbv-green" /> Salvar no histórico
-              </label>
-              <button onclick="executarCalc('eletricidade')" class="btn-primary w-full justify-center text-sm">
-                <i data-lucide="play" class="w-4 h-4"></i> Calcular
-              </button>
-            </div>
-
-            <div class="calc-card">
-              <div class="calc-card-header">
-                <div class="calc-icon e1">❄️</div>
-                <div class="flex-1">
-                  <div class="font-display text-base text-mbv-dark">Refrigerante (fugitivo)</div>
-                  <span class="escopo-tag e1">Escopo 1</span>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div>
-                  <label class="field-label">Tipo de gás</label>
-                  <select id="calc-ref-tipo" class="field-input"></select>
-                </div>
-                <div>
-                  <label class="field-label">Kg vazados</label>
-                  <input id="calc-ref-kg" class="field-input" type="number" step="0.001" placeholder="0" />
-                </div>
-                <div id="calc-ref-preview" class="text-[11px] text-stone-500 font-mono"></div>
-              </div>
-              <div class="calc-result">
-                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · GWP AR6</div></div>
-                <div class="value" id="calc-ref-result">—</div>
-              </div>
-              <label class="flex items-center gap-2 text-xs text-stone-600">
-                <input type="checkbox" id="calc-ref-save" class="accent-mbv-green" /> Salvar no histórico
-              </label>
-              <button onclick="executarCalc('refrigerante')" class="btn-primary w-full justify-center text-sm">
-                <i data-lucide="play" class="w-4 h-4"></i> Calcular
-              </button>
-            </div>
-
-            <div class="calc-card">
-              <div class="calc-card-header">
-                <div class="calc-icon e3">🛒</div>
-                <div class="flex-1">
-                  <div class="font-display text-base text-mbv-dark">Cadeia de Fornecimento</div>
-                  <span class="escopo-tag e3">Escopo 3</span>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div>
-                  <label class="field-label">Setor</label>
-                  <select id="calc-cad-setor" class="field-input"></select>
-                </div>
-                <div>
-                  <label class="field-label">Valor compras (R$)</label>
-                  <input id="calc-cad-valor" class="field-input" type="number" step="0.01" placeholder="0" />
-                </div>
-                <div id="calc-cad-preview" class="text-[11px] text-stone-500 font-mono"></div>
-              </div>
-              <div class="calc-result">
-                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · EEIO</div></div>
-                <div class="value" id="calc-cad-result">—</div>
-              </div>
-              <label class="flex items-center gap-2 text-xs text-stone-600">
-                <input type="checkbox" id="calc-cad-save" class="accent-mbv-green" /> Salvar no histórico
-              </label>
-              <button onclick="executarCalc('cadeia')" class="btn-primary w-full justify-center text-sm">
-                <i data-lucide="play" class="w-4 h-4"></i> Calcular
-              </button>
-            </div>
-
-            <div class="calc-card">
-              <div class="calc-card-header">
-                <div class="calc-icon e3">🚛</div>
-                <div class="flex-1">
-                  <div class="font-display text-base text-mbv-dark">Transporte Rodoviário</div>
-                  <span class="escopo-tag e3">Escopo 3</span>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="field-label">Distância (km)</label>
-                    <input id="calc-trp-km" class="field-input" type="number" step="0.1" placeholder="0" />
-                  </div>
-                  <div>
-                    <label class="field-label">Carga (ton)</label>
-                    <input id="calc-trp-ton" class="field-input" type="number" step="0.1" value="1" />
+              <div class="calc-card">
+                <div class="calc-card-header">
+                  <div class="calc-icon e1">❄️</div>
+                  <div class="flex-1">
+                    <div class="font-display text-base text-mbv-dark">Refrigerante (fugitivo)</div>
+                    <span class="escopo-tag e1">Escopo 1</span>
                   </div>
                 </div>
-                <div>
-                  <label class="field-label">Veículo</label>
-                  <select id="calc-trp-veic" class="field-input"></select>
+                <div class="calc-card__body">
+                  <div>
+                    <label class="field-label">Tipo de gás</label>
+                    <select id="calc-ref-tipo" class="field-input"></select>
+                  </div>
+                  <div>
+                    <label class="field-label">Kg vazados / repostos</label>
+                    <input id="calc-ref-kg" class="field-input" type="number" step="0.001" placeholder="0" />
+                  </div>
+                  <div id="calc-ref-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                  <div class="calc-fonte"><i data-lucide="book-marked"></i><span>GWP 100 anos — IPCC AR5/AR6</span></div>
                 </div>
-                <div id="calc-trp-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                <div class="calc-result">
+                  <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · GWP</div></div>
+                  <div class="value" id="calc-ref-result">—</div>
+                </div>
+                <div class="calc-gases" id="calc-ref-gases"></div>
+                <label class="flex items-center gap-2 text-xs text-stone-600">
+                  <input type="checkbox" id="calc-ref-save" class="accent-mbv-green" /> Salvar no histórico
+                </label>
+                <button onclick="executarCalc('refrigerante')" class="btn-primary w-full justify-center text-sm">
+                  <i data-lucide="play" class="w-4 h-4"></i> Calcular
+                </button>
+                <button id="calc-ref-mem" class="btn-mem" disabled onclick="abrirMemoria('refrigerante')">
+                  <i data-lucide="file-search" class="w-4 h-4"></i> Memória de cálculo
+                </button>
               </div>
-              <div class="calc-result">
-                <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · tkm</div></div>
-                <div class="value" id="calc-trp-result">—</div>
-              </div>
-              <label class="flex items-center gap-2 text-xs text-stone-600">
-                <input type="checkbox" id="calc-trp-save" class="accent-mbv-green" /> Salvar no histórico
-              </label>
-              <button onclick="executarCalc('transporte')" class="btn-primary w-full justify-center text-sm">
-                <i data-lucide="play" class="w-4 h-4"></i> Calcular
-              </button>
-            </div>
 
+            </div>
+          </div>
+
+          <!-- ============ ESCOPO 2 ============ -->
+          <div class="scope-group">
+            <div class="scope-group__head">
+              <span class="scope-badge s2">E2</span>
+              <div>
+                <div class="scope-group__title">Escopo 2 — Energia adquirida</div>
+                <div class="scope-group__sub">Eletricidade comprada da rede (fator médio do SIN)</div>
+              </div>
+            </div>
+            <div class="scope-grid">
+
+              <div class="calc-card">
+                <div class="calc-card-header">
+                  <div class="calc-icon e2">⚡</div>
+                  <div class="flex-1">
+                    <div class="font-display text-base text-mbv-dark">Energia Elétrica</div>
+                    <span class="escopo-tag e2">Escopo 2</span>
+                  </div>
+                </div>
+                <div class="calc-card__body">
+                  <div>
+                    <label class="field-label">Consumo (kWh)</label>
+                    <input id="calc-ele-kwh" class="field-input" type="number" step="0.01" placeholder="0" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="field-label">Abordagem</label>
+                      <select id="calc-ele-base" class="field-input">
+                        <option value="location">Location-based</option>
+                        <option value="market">Market-based</option>
+                      </select>
+                    </div>
+                    <div id="calc-ele-ano-wrap">
+                      <label class="field-label">Ano do fator</label>
+                      <select id="calc-ele-ano" class="field-input"></select>
+                    </div>
+                  </div>
+                  <div id="calc-ele-fator-wrap" class="hidden">
+                    <label class="field-label">Fator contratual (tCO₂e/MWh)</label>
+                    <input id="calc-ele-fator" class="field-input" type="number" step="0.0001" placeholder="0 (I-REC) ou valor do contrato" />
+                  </div>
+                  <div id="calc-ele-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                  <div class="calc-fonte" id="calc-ele-fonte"><i data-lucide="book-marked"></i><span>MCTI/SIRENE — fator médio do SIN</span></div>
+                </div>
+                <div class="calc-result">
+                  <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · fator SIN</div></div>
+                  <div class="value" id="calc-ele-result">—</div>
+                </div>
+                <div class="calc-gases" id="calc-ele-gases"></div>
+                <label class="flex items-center gap-2 text-xs text-stone-600">
+                  <input type="checkbox" id="calc-ele-save" class="accent-mbv-green" /> Salvar no histórico
+                </label>
+                <button onclick="executarCalc('eletricidade')" class="btn-primary w-full justify-center text-sm">
+                  <i data-lucide="play" class="w-4 h-4"></i> Calcular
+                </button>
+                <button id="calc-ele-mem" class="btn-mem" disabled onclick="abrirMemoria('eletricidade')">
+                  <i data-lucide="file-search" class="w-4 h-4"></i> Memória de cálculo
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ============ ESCOPO 3 ============ -->
+          <div class="scope-group">
+            <div class="scope-group__head">
+              <span class="scope-badge s3">E3</span>
+              <div>
+                <div class="scope-group__title">Escopo 3 — Outras emissões indiretas</div>
+                <div class="scope-group__sub">Cadeia de valor — métodos de triagem (spend-based / t·km)</div>
+              </div>
+            </div>
+            <div class="scope-grid">
+
+              <div class="calc-card">
+                <div class="calc-card-header">
+                  <div class="calc-icon e3">🛒</div>
+                  <div class="flex-1">
+                    <div class="font-display text-base text-mbv-dark">Cadeia de Fornecimento</div>
+                    <span class="escopo-tag e3">Escopo 3</span>
+                  </div>
+                </div>
+                <div class="calc-card__body">
+                  <div>
+                    <label class="field-label">Setor</label>
+                    <select id="calc-cad-setor" class="field-input"></select>
+                  </div>
+                  <div>
+                    <label class="field-label">Valor compras (R$)</label>
+                    <input id="calc-cad-valor" class="field-input" type="number" step="0.01" placeholder="0" />
+                  </div>
+                  <div id="calc-cad-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                  <div class="calc-fonte"><i data-lucide="book-marked"></i><span>EEIO / spend-based · TRIAGEM</span></div>
+                </div>
+                <div class="calc-result">
+                  <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · EEIO</div></div>
+                  <div class="value" id="calc-cad-result">—</div>
+                </div>
+                <div class="calc-gases" id="calc-cad-gases"></div>
+                <label class="flex items-center gap-2 text-xs text-stone-600">
+                  <input type="checkbox" id="calc-cad-save" class="accent-mbv-green" /> Salvar no histórico
+                </label>
+                <button onclick="executarCalc('cadeia')" class="btn-primary w-full justify-center text-sm">
+                  <i data-lucide="play" class="w-4 h-4"></i> Calcular
+                </button>
+                <button id="calc-cad-mem" class="btn-mem" disabled onclick="abrirMemoria('cadeia')">
+                  <i data-lucide="file-search" class="w-4 h-4"></i> Memória de cálculo
+                </button>
+              </div>
+
+              <div class="calc-card">
+                <div class="calc-card-header">
+                  <div class="calc-icon e3">🚛</div>
+                  <div class="flex-1">
+                    <div class="font-display text-base text-mbv-dark">Transporte Rodoviário</div>
+                    <span class="escopo-tag e3">Escopo 3</span>
+                  </div>
+                </div>
+                <div class="calc-card__body">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="field-label">Distância (km)</label>
+                      <input id="calc-trp-km" class="field-input" type="number" step="0.1" placeholder="0" />
+                    </div>
+                    <div>
+                      <label class="field-label">Carga (ton)</label>
+                      <input id="calc-trp-ton" class="field-input" type="number" step="0.1" value="1" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="field-label">Veículo / modal</label>
+                    <select id="calc-trp-veic" class="field-input"></select>
+                  </div>
+                  <div id="calc-trp-preview" class="text-[11px] text-stone-500 font-mono"></div>
+                  <div class="calc-fonte"><i data-lucide="book-marked"></i><span>GHG Protocol Scope 3 · t·km</span></div>
+                </div>
+                <div class="calc-result">
+                  <div><div class="label">Resultado</div><div class="text-[10px] text-mbv-olive">tCO₂e · t·km</div></div>
+                  <div class="value" id="calc-trp-result">—</div>
+                </div>
+                <div class="calc-gases" id="calc-trp-gases"></div>
+                <label class="flex items-center gap-2 text-xs text-stone-600">
+                  <input type="checkbox" id="calc-trp-save" class="accent-mbv-green" /> Salvar no histórico
+                </label>
+                <button onclick="executarCalc('transporte')" class="btn-primary w-full justify-center text-sm">
+                  <i data-lucide="play" class="w-4 h-4"></i> Calcular
+                </button>
+                <button id="calc-trp-mem" class="btn-mem" disabled onclick="abrirMemoria('transporte')">
+                  <i data-lucide="file-search" class="w-4 h-4"></i> Memória de cálculo
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
 
@@ -1324,6 +1498,35 @@ curl -X POST <span id="sample-base">http://localhost:8000</span>/api/v1/emissoes
           <i data-lucide="check" class="w-4 h-4"></i> Aplicar no campo
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: MEMÓRIA DE CÁLCULO (evidência ISO 14064-3) ============ -->
+<div id="mem-modal" class="hidden">
+  <div class="mem-card">
+    <div class="mem-head">
+      <div>
+        <div style="font-size:0.6rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--mbv-green); font-weight:700;">
+          Memória de cálculo · evidência ISO 14064-3
+        </div>
+        <div id="mem-title" style="font-family:'Fraunces',serif; font-size:1.15rem; margin-top:0.15rem;">—</div>
+      </div>
+      <button onclick="fecharMemoria()" aria-label="Fechar"
+              style="background:rgba(255,255,255,0.12); color:#fff; border:none; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:1.1rem; line-height:1; flex-shrink:0;">×</button>
+    </div>
+    <div class="mem-body">
+      <div class="mem-meta" id="mem-meta"></div>
+      <div class="mem-steps" id="mem-steps"></div>
+      <div class="mem-total-wrap">
+        <span>Resultado verificável</span>
+        <span class="mem-total" id="mem-total">—</span>
+      </div>
+      <p style="font-size:0.66rem; color:#8a8a78; margin-top:0.8rem; line-height:1.5;">
+        Esta memória reproduz dado de atividade × fator de emissão × GWP por gás — o encadeamento que um
+        organismo verificador (OVV acreditado pelo Inmetro) audita sob a ISO 14064-3. Confirme os fatores SIN
+        na edição vigente do SIRENE/MCTI e da Ferramenta do Programa Brasileiro GHG Protocol antes de publicar.
+      </p>
     </div>
   </div>
 </div>
@@ -2187,24 +2390,32 @@ document.getElementById('config-form').addEventListener('submit', async (ev) => 
  *  CALCULADORAS IA — Hub + acoplamento contextual + histórico
  * ====================================================================== */
 
-const CALC_STATE = { catalogo: null, contextual: null };
+const CALC_STATE = { catalogo: null, contextual: null, ultimoResultado: {}, eletAnual: {}, gwpSets: null };
 
+// Fatores locais SÓ para o "preview" instantâneo (o cálculo oficial vem do backend
+// ISO 14064 / GHG Protocol Brasil). Fatores de combustão em kg/unidade — o preview
+// converte para tonelada dividindo por 1000 (mesma equação do motor_ia.py).
 const FATORES_LOCAIS = {
   combustiveis: {
-    'gasolina':         { co2: 2.212, ch4: 0.0004, n2o: 0.00014, uni: 'litro' },
-    'etanol':           { co2: 0.0,   ch4: 0.0003, n2o: 0.00011, uni: 'litro' },
-    'diesel':           { co2: 2.603, ch4: 0.0002, n2o: 0.00009, uni: 'litro' },
-    'gnv':              { co2: 1.937, ch4: 0.0066, n2o: 0.00003, uni: 'm³' },
-    'gas_natural':      { co2: 1.937, ch4: 0.0029, n2o: 0.00003, uni: 'm³' },
-    'glp':              { co2: 1.614, ch4: 0.0002, n2o: 0.00001, uni: 'kg' },
-    'oleo_combustivel': { co2: 3.123, ch4: 0.0003, n2o: 0.00012, uni: 'litro' },
-    'carvao_mineral':   { co2: 2.422, ch4: 0.0010, n2o: 0.00042, uni: 'kg' },
-    'biomassa':         { co2: 0.0,   ch4: 0.0300, n2o: 0.00400, uni: 'kg' },
-    'querosene':        { co2: 2.543, ch4: 0.0005, n2o: 0.00010, uni: 'litro' },
+    'gasolina':         { co2: 2.212, ch4: 0.0004, n2o: 0.00014, uni: 'litro', bio: false },
+    'etanol':           { co2: 1.526, ch4: 0.0003, n2o: 0.00011, uni: 'litro', bio: true  },
+    'etanol_hidratado': { co2: 1.526, ch4: 0.0003, n2o: 0.00011, uni: 'litro', bio: true  },
+    'diesel':           { co2: 2.603, ch4: 0.0002, n2o: 0.00009, uni: 'litro', bio: false },
+    'diesel_b':         { co2: 2.603, ch4: 0.0002, n2o: 0.00009, uni: 'litro', bio: false },
+    'gnv':              { co2: 1.937, ch4: 0.0066, n2o: 0.00003, uni: 'm³',    bio: false },
+    'gas_natural':      { co2: 1.937, ch4: 0.0029, n2o: 0.00003, uni: 'm³',    bio: false },
+    'glp':              { co2: 1.614, ch4: 0.0002, n2o: 0.00001, uni: 'kg',    bio: false },
+    'oleo_combustivel': { co2: 3.123, ch4: 0.0003, n2o: 0.00012, uni: 'litro', bio: false },
+    'carvao_mineral':   { co2: 2.422, ch4: 0.0010, n2o: 0.00042, uni: 'kg',    bio: false },
+    'biomassa':         { co2: 1.747, ch4: 0.0300, n2o: 0.00400, uni: 'kg',    bio: true  },
+    'lenha':            { co2: 1.747, ch4: 0.0300, n2o: 0.00400, uni: 'kg',    bio: true  },
+    'querosene':        { co2: 2.543, ch4: 0.0005, n2o: 0.00010, uni: 'litro', bio: false },
   },
-  GWP_CH4: 27.9,
-  GWP_N2O: 273.0,
-  fatorEletricidade: 0.0907 / 1000,
+  // GWP padrão = AR6 (100 anos). Sobrescrito pela seleção AR5/AR6 do catálogo.
+  GWP: { AR6: { CO2: 1, CH4: 27.9, N2O: 273 }, AR5: { CO2: 1, CH4: 28, N2O: 265 } },
+  // Fator SIN por ano (tCO₂/MWh) — preenchido do catálogo; fallback = 2023.
+  eletricidadeAnualFallback: { 2023: 0.0385, 2011: 0.0292 },
+  fatorEletricidadePadrao: 0.0385,
   refrigerantes: {
     'r-22': 1810, 'r-134a': 1430, 'r-404a': 3922, 'r-410a': 2088,
     'r-407c': 1774, 'r-32': 675, 'hfo-1234yf': 4,
@@ -2221,6 +2432,11 @@ const FATORES_LOCAIS = {
   },
 };
 
+function gwpAtual() {
+  const set = (gv('calc-comb-gwp') || 'AR6').toUpperCase();
+  return FATORES_LOCAIS.GWP[set] || FATORES_LOCAIS.GWP.AR6;
+}
+
 function previewLocal(tipo, dados) {
   const F = FATORES_LOCAIS;
   if (tipo === 'combustivel') {
@@ -2228,9 +2444,27 @@ function previewLocal(tipo, dados) {
     const f = F.combustiveis[k];
     if (!f) return null;
     const q = +dados.quantidade || 0;
-    return q * (f.co2 + f.ch4 * F.GWP_CH4 + f.n2o * F.GWP_N2O);
+    const g = gwpAtual();
+    // tonelada de cada gás = kg/un × un ÷ 1000 × GWP. CO₂ biogênico fica fora do total fóssil.
+    const co2 = f.bio ? 0 : (f.co2 * q / 1000) * g.CO2;
+    const ch4 = (f.ch4 * q / 1000) * g.CH4;
+    const n2o = (f.n2o * q / 1000) * g.N2O;
+    return co2 + ch4 + n2o;
   }
-  if (tipo === 'eletricidade') return (+dados.kwh || 0) * F.fatorEletricidade;
+  if (tipo === 'eletricidade') {
+    const base = gv('calc-ele-base') || 'location';
+    const kwh = +dados.kwh || 0;
+    if (base === 'market') {
+      const fc = parseFloat(gv('calc-ele-fator'));
+      const fator = isNaN(fc) ? 0 : fc;           // I-REC/contrato → tipicamente 0
+      return (kwh / 1000) * fator;
+    }
+    const ano = gv('calc-ele-ano');
+    const fator = (CALC_STATE.eletAnual && CALC_STATE.eletAnual[ano] != null)
+      ? CALC_STATE.eletAnual[ano]
+      : F.fatorEletricidadePadrao;
+    return (kwh / 1000) * fator;                  // tCO₂/MWh × MWh
+  }
   if (tipo === 'refrigerante') {
     const gwp = F.refrigerantes[(dados.refrigerante || '').toLowerCase()] || 1500;
     return (+dados.kg_vazados || 0) * gwp / 1000;
@@ -2263,19 +2497,49 @@ async function iniciarCalculadoras() {
   const cat = await carregarCatalogo();
   if (!cat) return;
 
-  popularSelect('calc-comb-tipo', cat.combustiveis, c => c.id, c => `${c.label} (${c.unidade})`);
+  // Mapa de fatores SIN por ano (para o preview local)
+  CALC_STATE.eletAnual = {};
+  (cat.anos_eletricidade || []).forEach(a => { CALC_STATE.eletAnual[String(a.ano)] = a.fator_mwh; });
+  if (!Object.keys(CALC_STATE.eletAnual).length) {
+    CALC_STATE.eletAnual = { ...FATORES_LOCAIS.eletricidadeAnualFallback };
+  }
+  CALC_STATE.gwpSets = cat.gwp_sets || null;
+  if (cat.gwp_sets) {
+    Object.entries(cat.gwp_sets).forEach(([k, v]) => {
+      FATORES_LOCAIS.GWP[k] = { CO2: v.CO2 ?? 1, CH4: v.CH4, N2O: v.N2O };
+    });
+  }
+
+  popularSelect('calc-comb-tipo', cat.combustiveis, c => c.id,
+                c => `${c.label} (${c.unidade})${c.biogenico ? ' · biogênico' : ''}`);
   popularSelect('calc-ref-tipo', cat.refrigerantes, c => c.id, c => `${c.label} · GWP ${c.gwp.toLocaleString('pt-BR')}`);
   popularSelect('calc-cad-setor', cat.setores_cadeia, c => c.id, c => c.label);
   popularSelect('calc-trp-veic', cat.veiculos_transporte.map(v => ({id: v, label: v.replace(/_/g, ' ')})),
                 c => c.id, c => c.label);
 
+  // Anos de eletricidade (mais recente primeiro) + observação da fonte
+  popularSelect('calc-ele-ano', (cat.anos_eletricidade || []),
+                a => a.ano, a => `${a.ano} · ${a.fator_mwh} tCO₂/MWh`);
+
+  // Conjunto de GWP (AR6 padrão, AR5 para compatibilidade Programa Brasileiro GHG)
+  const gwpSel = document.getElementById('calc-comb-gwp');
+  if (gwpSel) {
+    const sets = Object.keys(cat.gwp_sets || { AR6: 1, AR5: 1 });
+    gwpSel.innerHTML = sets.map(s =>
+      `<option value="${s}"${s === 'AR6' ? ' selected' : ''}>${s === 'AR6' ? 'IPCC AR6 (padrão)' : 'IPCC ' + s}</option>`
+    ).join('');
+  }
+
+  wireEletricidadeBase();
+  atualizarFonteCombustivel();
+
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  setupCalcPreview('combustivel', ['calc-comb-tipo', 'calc-comb-qtd', 'calc-comb-cat'],
+  setupCalcPreview('combustivel', ['calc-comb-tipo', 'calc-comb-qtd', 'calc-comb-cat', 'calc-comb-gwp'],
                    () => ({ combustivel: gv('calc-comb-tipo'), quantidade: gv('calc-comb-qtd') }),
                    'calc-comb-preview', 'calc-comb-result',
-                   () => atualizarUnidadeCombustivel());
-  setupCalcPreview('eletricidade', ['calc-ele-kwh'],
+                   () => { atualizarUnidadeCombustivel(); atualizarFonteCombustivel(); });
+  setupCalcPreview('eletricidade', ['calc-ele-kwh', 'calc-ele-base', 'calc-ele-ano', 'calc-ele-fator'],
                    () => ({ kwh: gv('calc-ele-kwh') }),
                    'calc-ele-preview', 'calc-ele-result');
   setupCalcPreview('refrigerante', ['calc-ref-tipo', 'calc-ref-kg'],
@@ -2291,12 +2555,47 @@ async function iniciarCalculadoras() {
   atualizarUnidadeCombustivel();
 }
 
+// Alterna entre Escopo 2 location-based (fator SIN por ano) e market-based (contrato/I-REC)
+function wireEletricidadeBase() {
+  const sel = document.getElementById('calc-ele-base');
+  if (!sel) return;
+  const aplicar = () => {
+    const market = sel.value === 'market';
+    const anoWrap = document.getElementById('calc-ele-ano-wrap');
+    const fatorWrap = document.getElementById('calc-ele-fator-wrap');
+    if (anoWrap) anoWrap.classList.toggle('hidden', market);
+    if (fatorWrap) fatorWrap.classList.toggle('hidden', !market);
+    const fonte = document.getElementById('calc-ele-fonte');
+    if (fonte) {
+      const txt = market ? 'Market-based — contrato/I-REC (informe o fator)'
+                         : 'MCTI/SIRENE — fator médio do SIN (location-based)';
+      const span = fonte.querySelector('span');
+      if (span) span.textContent = txt;
+    }
+  };
+  sel.addEventListener('change', aplicar);
+  aplicar();
+}
+
+function atualizarFonteCombustivel() {
+  const tipo = gv('calc-comb-tipo');
+  const cat = CALC_STATE.catalogo;
+  const fonteEl = document.getElementById('calc-comb-fonte');
+  if (!cat || !fonteEl) return;
+  const item = (cat.combustiveis || []).find(c => c.id === tipo);
+  const span = fonteEl.querySelector('span');
+  if (item && span) {
+    span.textContent = (item.fonte || 'IPCC / GHG Protocol Brasil')
+      + (item.biogenico ? ' · CO₂ biogênico reportado à parte' : '');
+  }
+}
+
 function gv(id) { return document.getElementById(id)?.value; }
 
 function popularSelect(id, items, valFn, labelFn) {
   const sel = document.getElementById(id);
   if (!sel) return;
-  sel.innerHTML = items.map(i => `<option value="${valFn(i)}">${labelFn(i)}</option>`).join('');
+  sel.innerHTML = (items || []).map(i => `<option value="${valFn(i)}">${labelFn(i)}</option>`).join('');
 }
 
 function atualizarUnidadeCombustivel() {
@@ -2313,6 +2612,7 @@ function setupCalcPreview(tipo, ids, getDados, previewId, resultId, extraCb) {
     const v = previewLocal(tipo, d);
     if (v === null || isNaN(v)) {
       document.getElementById(previewId).textContent = '';
+      if (extraCb) extraCb();
       return;
     }
     document.getElementById(previewId).textContent = `Preview local: ${fmt(v, 6)} tCO₂e`;
@@ -2326,16 +2626,15 @@ function setupCalcPreview(tipo, ids, getDados, previewId, resultId, extraCb) {
   recalc();
 }
 
+const _SUFIXO = { combustivel: 'comb', eletricidade: 'ele', refrigerante: 'ref', cadeia: 'cad', transporte: 'trp' };
+
 async function executarCalc(tipo) {
   if (!state.token) { abrirModalLogin(); return; }
   const payload = montarPayload(tipo, false);
   if (!payload) return;
 
-  const resultId = `calc-${tipo === 'combustivel' ? 'comb' :
-                          tipo === 'eletricidade' ? 'ele' :
-                          tipo === 'refrigerante' ? 'ref' :
-                          tipo === 'cadeia' ? 'cad' : 'trp'}-result`;
-  const elResult = document.getElementById(resultId);
+  const suf = _SUFIXO[tipo];
+  const elResult = document.getElementById(`calc-${suf}-result`);
   elResult.textContent = '…';
 
   try {
@@ -2343,13 +2642,40 @@ async function executarCalc(tipo) {
       method: 'POST', body: JSON.stringify(payload),
     });
     elResult.textContent = fmt(data.tco2e, 4);
+
+    // Guarda o resultado completo p/ a memória de cálculo e renderiza os gases
+    CALC_STATE.ultimoResultado[tipo] = data;
+    renderGases(`calc-${suf}-gases`, data);
+    const btnMem = document.getElementById(`calc-${suf}-mem`);
+    if (btnMem) btnMem.disabled = false;
+
     let msg = `${tipo}: ${fmt(data.tco2e, 4)} tCO₂e`;
+    if (data.co2_biogenico_t > 0) msg += ` (+ ${fmt(data.co2_biogenico_t, 4)} t CO₂ biogênico à parte)`;
     if (payload.salvar) msg += ' · salvo no histórico';
     toast(msg, 'success');
   } catch (e) {
     elResult.textContent = '—';
     toast('Erro: ' + e.message, 'error');
   }
+}
+
+// Renderiza os gases (CO₂/CH₄/N₂O…) como chips, destacando o biogênico
+function renderGases(elId, data) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const gases = (data && data.gases) || [];
+  const chips = gases.map(g => {
+    const bio = g.biogenico ? ' bio' : '';
+    const val = fmt(g.tco2e, 4);
+    return `<span class="gas-chip${bio}">${g.gas}: ${val} t</span>`;
+  });
+  if (data && data.nivel_tier) {
+    chips.unshift(`<span class="tier-pill">${data.nivel_tier}</span>`);
+  }
+  if (data && data.co2_biogenico_t > 0) {
+    chips.push(`<span class="gas-chip bio">CO₂ biog.: ${fmt(data.co2_biogenico_t, 4)} t</span>`);
+  }
+  el.innerHTML = chips.join('');
 }
 
 function montarPayload(tipo, paraContexto) {
@@ -2359,13 +2685,23 @@ function montarPayload(tipo, paraContexto) {
       combustivel: gv('calc-comb-tipo'),
       quantidade: parseFloat(gv('calc-comb-qtd')) || 0,
       categoria: gv('calc-comb-cat'),
-      escopo: gv('calc-comb-cat') === 'combustivel_movel' ? 1 : 1,
+      escopo: 1,
+      gwp_set: (gv('calc-comb-gwp') || 'AR6'),
       salvar: document.getElementById('calc-comb-save').checked,
     };
     if (p.quantidade <= 0) { toast('Informe quantidade > 0', 'warn'); return null; }
   } else if (tipo === 'eletricidade') {
+    const base = gv('calc-ele-base') || 'location';
     p = { kwh: parseFloat(gv('calc-ele-kwh')) || 0,
+          base: base,
           salvar: document.getElementById('calc-ele-save').checked };
+    if (base === 'market') {
+      const fc = parseFloat(gv('calc-ele-fator'));
+      p.fator_customizado = isNaN(fc) ? 0 : fc;
+    } else {
+      const ano = parseInt(gv('calc-ele-ano'), 10);
+      if (!isNaN(ano)) p.ano = ano;
+    }
     if (p.kwh <= 0) { toast('Informe kWh > 0', 'warn'); return null; }
   } else if (tipo === 'refrigerante') {
     p = { refrigerante: gv('calc-ref-tipo'),
@@ -2385,6 +2721,65 @@ function montarPayload(tipo, paraContexto) {
     if (p.km <= 0) { toast('Informe km > 0', 'warn'); return null; }
   }
   return p;
+}
+
+// ── Memória de cálculo (evidência de auditoria ISO 14064-3) ──────────────────
+function abrirMemoria(tipo) {
+  const data = CALC_STATE.ultimoResultado[tipo];
+  if (!data) { toast('Calcule primeiro para gerar a memória de cálculo.', 'warn'); return; }
+  renderMemoria(tipo, data);
+  const m = document.getElementById('mem-modal');
+  if (m) m.classList.remove('hidden');
+}
+
+function fecharMemoria() {
+  const m = document.getElementById('mem-modal');
+  if (m) m.classList.add('hidden');
+}
+
+function renderMemoria(tipo, data) {
+  const titulos = {
+    combustivel: 'Combustão — Escopo 1', eletricidade: 'Eletricidade — Escopo 2',
+    refrigerante: 'Emissão fugitiva — Escopo 1', cadeia: 'Cadeia de fornecimento — Escopo 3',
+    transporte: 'Transporte & logística — Escopo 3',
+  };
+  const elT = document.getElementById('mem-title');
+  if (elT) elT.textContent = titulos[tipo] || 'Memória de cálculo';
+
+  const meta = [];
+  if (data.fonte_fator)          meta.push(['Fonte do fator', data.fonte_fator]);
+  if (data.gwp_set)              meta.push(['Conjunto de GWP', data.gwp_set]);
+  if (data.nivel_tier)          meta.push(['Nível (Tier)', data.nivel_tier]);
+  if (data.qualidade_dado)      meta.push(['Qualidade do dado', data.qualidade_dado]);
+  if (data.incerteza_pct != null) meta.push(['Incerteza indicativa', `± ${data.incerteza_pct}%`]);
+  if (data.referencia_normativa) meta.push(['Enquadramento', data.referencia_normativa]);
+  const elMeta = document.getElementById('mem-meta');
+  if (elMeta) {
+    elMeta.innerHTML = meta.map(([k, v]) =>
+      `<div class="mem-meta__item"><div class="mem-meta__k">${k}</div><div class="mem-meta__v">${escapeHtml(v)}</div></div>`
+    ).join('');
+  }
+
+  const passos = data.memoria_calculo || [];
+  const elSteps = document.getElementById('mem-steps');
+  if (elSteps) {
+    elSteps.innerHTML = passos.map(linha => {
+      const indent = /^\s/.test(linha) ? ' style="padding-left:1.1rem"' : '';
+      return `<div class="mem-step"${indent}>${escapeHtml(linha)}</div>`;
+    }).join('');
+  }
+
+  const elTot = document.getElementById('mem-total');
+  if (elTot) {
+    let t = `${fmt(data.tco2e, 6)} tCO₂e`;
+    if (data.co2_biogenico_t > 0) t += `  ·  CO₂ biogênico à parte: ${fmt(data.co2_biogenico_t, 6)} t`;
+    elTot.textContent = t;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 function trocarAbaCalc(aba) {

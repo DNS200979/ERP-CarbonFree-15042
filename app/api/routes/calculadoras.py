@@ -6,8 +6,12 @@ Cada endpoint expõe UMA função pura do motor_ia.py, permitindo:
 - Acoplamento contextual (botão 🧮 nos campos do Inventário GEE)
 - Integração externa (SAP/TOTVS chamando uma calculadora isolada)
 
-Todos os endpoints aceitam o parâmetro `salvar` (bool) para gravar
-opcionalmente no histórico do usuário.
+Esta versão acrescenta a RASTREABILIDADE "grau Inmetro / ISO 14064": cada
+resposta traz a quebra por gás, a fonte oficial do fator, o conjunto de GWP, o
+nível metodológico (Tier), a incerteza indicativa e a MEMÓRIA DE CÁLCULO
+passo-a-passo (evidência de verificação).
+
+Todos os endpoints aceitam `salvar` (bool) para gravar no histórico do usuário.
 """
 
 from typing import Optional, Any
@@ -22,13 +26,16 @@ from app.services.motor_ia import (
     calcular_refrigerante,
     calcular_cadeia_fornecimento,
     calcular_transporte_rodoviario,
-    listar_combustiveis,
-    listar_refrigerantes,
-    listar_setores_cadeia,
+    listar_anos_eletricidade,
     FATORES_COMBUSTIVEIS,
     FATORES_REFRIGERANTES,
     FATORES_CADEIA_FORNECIMENTO,
+    FATORES_TRANSPORTE_TKM,
     FATOR_ELETRICIDADE_SIN,
+    ANO_ELETRICIDADE_PADRAO,
+    GWP_SETS,
+    FONTES,
+    REF_VERIFICACAO,
 )
 
 router = APIRouter()
@@ -42,6 +49,7 @@ class CombustivelEntrada(BaseModel):
     escopo: int = Field(1, ge=1, le=3)
     categoria: str = Field("combustivel_estacionario",
                             description="combustivel_estacionario | combustivel_movel")
+    gwp_set: str = Field("AR6", description="Conjunto de GWP: AR6 (padrão) ou AR5")
     salvar: bool = Field(False, description="Persistir no histórico do usuário")
     aplicado_em_emissao_id: Optional[int] = None
     campo_destino: Optional[str] = None
@@ -49,6 +57,10 @@ class CombustivelEntrada(BaseModel):
 
 class EletricidadeEntrada(BaseModel):
     kwh: float = Field(..., gt=0, description="Consumo em quilowatts-hora")
+    ano: Optional[int] = Field(None, description="Ano do fator médio do SIN (MCTI/SIRENE)")
+    fator_customizado: Optional[float] = Field(
+        None, description="Fator tCO₂e/MWh manual (ex.: contrato mercado livre / I-REC)")
+    base: str = Field("location", description="location (grid médio) | market (contratual)")
     salvar: bool = False
     aplicado_em_emissao_id: Optional[int] = None
     campo_destino: Optional[str] = None
@@ -105,15 +117,29 @@ def _salvar_historico(usuario: dict, tipo: str, escopo: int,
 
 
 def _serializar(resultado, tipo: str, escopo: int) -> dict:
-    """Converte ResultadoCalculo (dataclass) em dict para a resposta REST."""
+    """Converte ResultadoCalculo (dataclass) em dict para a resposta REST.
+
+    Inclui a camada de rastreabilidade (gases, fonte, GWP, Tier, incerteza,
+    memória de cálculo) sem quebrar os campos antigos.
+    """
     return {
         "tipo": tipo,
         "escopo": escopo,
         "tco2e": round(resultado.tco2e, 6),
-        "fator_utilizado": round(resultado.fator_utilizado or 0, 6),
+        "fator_utilizado": round(resultado.fator_utilizado or 0, 9),
         "unidade_fator": resultado.unidade_fator,
         "detalhamento": resultado.detalhamento or {},
         "nota": resultado.nota,
+        # ── camada de auditoria ──
+        "gases": resultado.gases or [],
+        "fonte_fator": resultado.fonte_fator,
+        "referencia_normativa": resultado.referencia_normativa,
+        "gwp_set": resultado.gwp_set,
+        "nivel_tier": resultado.nivel_tier,
+        "qualidade_dado": resultado.qualidade_dado,
+        "incerteza_pct": resultado.incerteza_pct,
+        "co2_biogenico_t": round(resultado.co2_biogenico_t or 0, 6),
+        "memoria_calculo": resultado.memoria_calculo or [],
     }
 
 
@@ -122,18 +148,19 @@ def _serializar(resultado, tipo: str, escopo: int) -> dict:
 @router.post("/combustivel", status_code=status.HTTP_200_OK,
              summary="Calcular emissão por consumo de combustível")
 def calc_combustivel(dados: CombustivelEntrada, usuario: dict = Depends(usuario_autenticado)):
-    """
-    Calcula tCO₂e a partir do consumo de combustível.
-    Fatores: IPCC AR6 (CO₂ + CH₄ × GWP + N₂O × GWP).
-    """
+    """tCO₂e a partir do consumo de combustível. Fatores IPCC/GHG Protocol Brasil,
+    GWP AR6 (CO₂ + CH₄×GWP + N₂O×GWP). Combustível biogênico tem CO₂ reportado à parte."""
     if dados.combustivel.lower().replace(" ", "_").replace("-", "_") not in FATORES_COMBUSTIVEIS:
         raise HTTPException(400, f"Combustível desconhecido. Disponíveis: {list(FATORES_COMBUSTIVEIS.keys())}")
+    if dados.gwp_set not in GWP_SETS:
+        raise HTTPException(400, f"Conjunto de GWP inválido. Use: {list(GWP_SETS.keys())}")
 
-    r = calcular_combustivel(dados.combustivel, dados.quantidade, dados.escopo, dados.categoria)
+    r = calcular_combustivel(dados.combustivel, dados.quantidade, dados.escopo,
+                             dados.categoria, dados.gwp_set)
     if dados.salvar:
         _salvar_historico(usuario, "combustivel", dados.escopo,
                           {"combustivel": dados.combustivel, "quantidade": dados.quantidade,
-                           "categoria": dados.categoria}, r,
+                           "categoria": dados.categoria, "gwp_set": dados.gwp_set}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
     return _serializar(r, "combustivel", dados.escopo)
@@ -142,11 +169,14 @@ def calc_combustivel(dados: CombustivelEntrada, usuario: dict = Depends(usuario_
 @router.post("/eletricidade", status_code=status.HTTP_200_OK,
              summary="Calcular emissão por consumo elétrico")
 def calc_eletricidade(dados: EletricidadeEntrada, usuario: dict = Depends(usuario_autenticado)):
-    """Escopo 2 — fator do SIN brasileiro (MCTI 2024)."""
-    r = calcular_eletricidade(dados.kwh)
+    """Escopo 2 — fator MÉDIO do SIN por ano (MCTI/SIRENE), location-based por
+    padrão. Aceita fator manual/market-based (contrato, I-REC)."""
+    r = calcular_eletricidade(dados.kwh, ano=dados.ano,
+                              fator_customizado=dados.fator_customizado, base=dados.base)
     if dados.salvar:
         _salvar_historico(usuario, "eletricidade", 2,
-                          {"kwh": dados.kwh}, r,
+                          {"kwh": dados.kwh, "ano": dados.ano, "base": dados.base,
+                           "fator_customizado": dados.fator_customizado}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
     return _serializar(r, "eletricidade", 2)
@@ -155,7 +185,7 @@ def calc_eletricidade(dados: EletricidadeEntrada, usuario: dict = Depends(usuari
 @router.post("/refrigerante", status_code=status.HTTP_200_OK,
              summary="Calcular emissão fugitiva de refrigerante")
 def calc_refrigerante(dados: RefrigeranteEntrada, usuario: dict = Depends(usuario_autenticado)):
-    """Escopo 1 fugitivo — vazamento de gases HFC com GWP AR6."""
+    """Escopo 1 fugitivo — vazamento de gases HFC com GWP 100 anos."""
     r = calcular_refrigerante(dados.refrigerante, dados.kg_vazados)
     if dados.salvar:
         _salvar_historico(usuario, "refrigerante", 1,
@@ -168,7 +198,7 @@ def calc_refrigerante(dados: RefrigeranteEntrada, usuario: dict = Depends(usuari
 @router.post("/cadeia", status_code=status.HTTP_200_OK,
              summary="Estimar emissão de cadeia de fornecimento (Escopo 3)")
 def calc_cadeia(dados: CadeiaEntrada, usuario: dict = Depends(usuario_autenticado)):
-    """Escopo 3 — estimativa EEIO por valor de compras."""
+    """Escopo 3 — estimativa EEIO (spend-based) por valor de compras. TRIAGEM."""
     r = calcular_cadeia_fornecimento(dados.setor, dados.valor_reais)
     if dados.salvar:
         _salvar_historico(usuario, "cadeia", 3,
@@ -181,7 +211,7 @@ def calc_cadeia(dados: CadeiaEntrada, usuario: dict = Depends(usuario_autenticad
 @router.post("/transporte", status_code=status.HTTP_200_OK,
              summary="Calcular emissão de transporte rodoviário (Escopo 3)")
 def calc_transporte(dados: TransporteEntrada, usuario: dict = Depends(usuario_autenticado)):
-    """Escopo 3 — fator tCO₂e/tkm (toneladas × km) por tipo de veículo."""
+    """Escopo 3 — fator tCO₂e/t·km (toneladas × km) por tipo de veículo."""
     r = calcular_transporte_rodoviario(dados.km, dados.veiculo, dados.toneladas)
     if dados.salvar:
         _salvar_historico(usuario, "transporte", 3,
@@ -195,10 +225,12 @@ def calc_transporte(dados: TransporteEntrada, usuario: dict = Depends(usuario_au
 
 @router.get("/catalogo", summary="Listar opções disponíveis em cada calculadora")
 def catalogo(usuario: dict = Depends(usuario_autenticado)):
-    """Devolve todas as opções aceitas (para popular selects no frontend)."""
+    """Devolve todas as opções aceitas (para popular selects no frontend),
+    incluindo a fonte oficial de cada fator e os anos de eletricidade."""
     return {
         "combustiveis": [
-            {"id": k, "label": v.get("desc", k), "unidade": v["uni"]}
+            {"id": k, "label": v.get("desc", k), "unidade": v["uni"],
+             "biogenico": v.get("bio", False), "fonte": FONTES.get(v.get("fonte", ""), "")}
             for k, v in FATORES_COMBUSTIVEIS.items()
         ],
         "refrigerantes": [
@@ -209,12 +241,14 @@ def catalogo(usuario: dict = Depends(usuario_autenticado)):
             {"id": k, "label": k.replace("_", " ").title(), "fator_tco2e_por_mil_reais": v}
             for k, v in FATORES_CADEIA_FORNECIMENTO.items()
         ],
-        "veiculos_transporte": [
-            "caminhao_diesel", "caminhao_leve", "van_diesel",
-            "trem", "navio", "aviao_carga",
-        ],
+        "veiculos_transporte": list(FATORES_TRANSPORTE_TKM.keys()),
         "fator_eletricidade_sin": FATOR_ELETRICIDADE_SIN,
+        "ano_eletricidade_padrao": ANO_ELETRICIDADE_PADRAO,
+        "anos_eletricidade": listar_anos_eletricidade(),
+        "gwp_sets": {k: {kk: vv for kk, vv in v.items() if kk != "fonte"} for k, v in GWP_SETS.items()},
         "categorias_combustivel": ["combustivel_estacionario", "combustivel_movel"],
+        "referencia_normativa": REF_VERIFICACAO,
+        "fontes": FONTES,
     }
 
 
