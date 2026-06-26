@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from app.ui.app import (
     COR_FUNDO, COR_VERDE, COR_VERDE_ESCURO, COR_AZUL, COR_TEXTO,
-    FONTE_NORMAL, FONTE_PEQUENA,
+    COR_VERMELHO, FONTE_NORMAL, FONTE_PEQUENA,
 )
 from app.models.usuario import Usuario
 
@@ -12,17 +12,32 @@ class TelaLogin(tk.Frame):
         super().__init__(master, bg=COR_FUNDO)
         self._build()
 
+        # Intercepta o "X" da janela também — fluxo único de saída
+        self.master.protocol("WM_DELETE_WINDOW", self._fechar_aplicacao)
+
     def _build(self):
+        # ── Barra superior com botão de fechar (canto sup. direito) ────────
+        topo = tk.Frame(self, bg=COR_FUNDO)
+        topo.pack(fill=tk.X, padx=10, pady=(8, 0))
+
+        tk.Button(
+            topo, text="✕ Fechar", command=self._fechar_aplicacao,
+            bg=COR_VERMELHO, fg="white", font=("Arial", 9, "bold"),
+            width=10, relief=tk.FLAT, cursor="hand2",
+        ).pack(side=tk.RIGHT)
+
+        # ── Cabeçalho ──────────────────────────────────────────────────────
         tk.Label(
             self, text="ERP CarbonFree 15.042 by DNS-TI",
             font=("Arial", 17, "bold"), fg=COR_VERDE_ESCURO, bg=COR_FUNDO,
-        ).pack(pady=(40, 4))
+        ).pack(pady=(20, 4))
 
         tk.Label(
             self, text="Sistema de Conformidade Ambiental",
             font=("Arial", 10, "italic"), fg="#7f8c8d", bg=COR_FUNDO,
         ).pack(pady=(0, 30))
 
+        # ── Formulário ─────────────────────────────────────────────────────
         form = tk.Frame(self, bg=COR_FUNDO)
         form.pack()
 
@@ -37,7 +52,7 @@ class TelaLogin(tk.Frame):
         self._senha.grid(row=1, column=1, pady=10)
         self._senha.bind("<Return>", lambda _: self._entrar())
 
-        # Botões principais
+        # ── Botões principais ──────────────────────────────────────────────
         btn_frame = tk.Frame(self, bg=COR_FUNDO)
         btn_frame.pack(pady=20)
 
@@ -63,7 +78,54 @@ class TelaLogin(tk.Frame):
             self, text="Esqueci minha senha", command=self._recuperar_senha,
             bg=COR_FUNDO, fg="#7f8c8d", font=("Arial", 9, "underline"),
             relief=tk.FLAT, cursor="hand2", bd=0,
-        ).pack(pady=(8, 0))
+        ).pack(pady=(8, 12))
+
+        # ── Botão SAIR DO SISTEMA (rodapé, destaque visual) ────────────────
+        rodape = tk.Frame(self, bg=COR_FUNDO)
+        rodape.pack(side=tk.BOTTOM, pady=(0, 20))
+
+        tk.Button(
+            rodape, text="⏻  SAIR DO SISTEMA",
+            command=self._fechar_aplicacao,
+            bg=COR_VERMELHO, fg="white", font=("Arial", 10, "bold"),
+            width=22, height=2, relief=tk.FLAT, cursor="hand2",
+        ).pack()
+
+        tk.Label(
+            rodape,
+            text="Encerra completamente o ERP",
+            font=("Arial", 8, "italic"), fg="#95a5a6", bg=COR_FUNDO,
+        ).pack(pady=(4, 0))
+
+    # ── Encerramento total da aplicação ────────────────────────────────────
+    def _fechar_aplicacao(self):
+        """Fecha a tela de login e encerra TODA a aplicação web/desktop."""
+        if not messagebox.askyesno(
+            "Encerrar Sistema",
+            "Deseja realmente fechar o ERP CarbonFree 15.042?\n\n"
+            "Esta ação encerrará completamente a aplicação.",
+        ):
+            return
+
+        # Tenta encerrar sessão remota (se houver)
+        try:
+            from app.database.client import get_client
+            get_client().auth.sign_out()
+        except Exception:
+            pass
+
+        # Destroi a janela raiz e finaliza o processo
+        try:
+            self.master.destroy()
+        except Exception:
+            pass
+        try:
+            self.master.quit()
+        except Exception:
+            pass
+        # Garantia final: encerra o processo Python (fecha "toda a web")
+        import sys
+        sys.exit(0)
 
     # ── autenticação ───────────────────────────────────────────────────────
 
@@ -109,23 +171,19 @@ class TelaLogin(tk.Frame):
             admin = get_admin_client()
 
             if admin:
-                # Com service role key: cria o usuário já confirmado, sem enviar e-mail
                 resp = admin.auth.admin.create_user({
                     "email": email,
                     "password": senha,
                     "email_confirm": True,
                 })
                 if resp.user:
-                    # Faz login imediato com as credenciais recém-criadas
                     login = get_client().auth.sign_in_with_password({"email": email, "password": senha})
                     self.master.registrar_login(Usuario(id=login.user.id, email=login.user.email or email))
                 return
 
-            # Sem service key: usa o fluxo padrão (pode pedir confirmação de e-mail)
             resp = get_client().auth.sign_up({"email": email, "password": senha})
 
             if resp.session and resp.user:
-                # Confirmação desativada no Supabase → entra direto
                 self.master.registrar_login(Usuario(id=resp.user.id, email=resp.user.email or email))
                 return
 
@@ -133,22 +191,18 @@ class TelaLogin(tk.Frame):
                 messagebox.showinfo(
                     "Verifique seu E-mail",
                     f"Conta criada para '{email}'.\n\n"
-                    f"Confirme o e-mail recebido e depois clique em ENTRAR.\n\n"
-                    f"Para evitar isso, adicione a SUPABASE_SERVICE_KEY no arquivo .env\n"
-                    f"(Settings → API → service_role no painel do Supabase).",
+                    f"Confirme o e-mail recebido e depois clique em ENTRAR.",
                 )
 
         except Exception as e:
             erro = str(e)
             if "already registered" in erro or "already been registered" in erro:
-                messagebox.showwarning("E-mail já cadastrado", "Esse e-mail já possui conta. Use ENTRAR ou recupere a senha.")
+                messagebox.showwarning("E-mail já cadastrado",
+                                       "Esse e-mail já possui conta. Use ENTRAR ou recupere a senha.")
             elif "rate limit" in erro.lower():
                 messagebox.showerror(
                     "Limite de E-mails Atingido",
-                    "O Supabase bloqueou o envio de e-mails temporariamente.\n\n"
-                    "Solução: adicione a SUPABASE_SERVICE_KEY no arquivo .env\n"
-                    "para criar contas sem precisar de e-mail.\n\n"
-                    "Onde encontrar: Supabase → Settings → API → service_role",
+                    "O Supabase bloqueou o envio de e-mails temporariamente.",
                 )
             else:
                 messagebox.showerror("Erro ao Criar Conta", f"Não foi possível criar a conta.\n\n{e}")
