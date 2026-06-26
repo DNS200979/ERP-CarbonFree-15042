@@ -22,7 +22,7 @@ if not _FASTAPI_OK:
         "ou: uv pip install fastapi uvicorn"
     )
 
-from app.api.routes import emissoes, certificados, integracao, calculadoras
+from app.api.routes import emissoes, certificados, integracao, calculadoras, mrv_mensal
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.config import SUPABASE_URL, SUPABASE_KEY
@@ -34,7 +34,7 @@ app = FastAPI(
         "API REST para integração do ERP Movimento Brasil Verde com sistemas externos "
         "(SAP, TOTVS, Oracle, etc.). Autenticação via JWT Supabase."
     ),
-    version="1.1.0",
+    version="1.2.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -51,6 +51,7 @@ app.include_router(emissoes.router,      prefix="/api/v1/emissoes",      tags=["
 app.include_router(certificados.router,  prefix="/api/v1/certificados",  tags=["Certificados Ambientais"])
 app.include_router(integracao.router,    prefix="/api/v1/integracao",    tags=["Integração SAP / TOTVS"])
 app.include_router(calculadoras.router,  prefix="/api/v1/calculadoras",  tags=["Calculadoras IA (atômicas)"])
+app.include_router(mrv_mensal.router,    prefix="/api/v1/mrv",           tags=["MRV Mensal (Etapa 1 SBCE)"])
 
 app.mount("/static", StaticFiles(directory="."), name="static")
 
@@ -67,6 +68,12 @@ def public_config():
         "supabase_anon_key": SUPABASE_KEY,
         "api_base": "",
     }
+
+
+@app.get("/mrv", include_in_schema=False)
+def mrv_page():
+    """Serve a página do módulo de Fechamento Mensal MRV."""
+    return FileResponse("mrv_mensal.html")
 
 
 @app.get("/", include_in_schema=False)

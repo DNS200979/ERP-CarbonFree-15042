@@ -1,6 +1,11 @@
 """
 Módulo 2 — Interface do Motor de IA para cálculo preciso de emissões.
-Permite adicionar atividades individuais e calcular o inventário completo.
+
+REORGANIZAÇÃO: as calculadoras agora ficam separadas em ABAS por ESCOPO
+(GHG Protocol). Cada aba contém somente as calculadoras pertinentes àquele
+escopo, e cada cálculo, ao ser adicionado, alimenta o inventário consolidado
+no rodapé. O botão "Gerar Inventário" envia os totais já agrupados por escopo
+diretamente para a Tela de Emissões — integração automática e auditável.
 """
 
 import tkinter as tk
@@ -16,8 +21,7 @@ from app.services.motor_ia import (
 )
 
 
-TIPOS_CALCULO = ["combustivel", "eletricidade", "refrigerante", "cadeia", "transporte"]
-
+# ── Configuração visual por escopo ──────────────────────────────────────────
 LABELS_TIPO = {
     "combustivel":   "Combustível",
     "eletricidade":  "Energia Elétrica",
@@ -25,6 +29,24 @@ LABELS_TIPO = {
     "cadeia":        "Cadeia de Fornecimento",
     "transporte":    "Transporte Rodoviário",
 }
+
+# Mapeia cada escopo às calculadoras que pertencem a ele
+CALCULADORAS_POR_ESCOPO = {
+    1: ["combustivel", "refrigerante"],   # Combustão direta + fugitivas
+    2: ["eletricidade"],                  # Energia comprada
+    3: ["cadeia", "transporte"],          # Cadeia de valor
+}
+
+DESCRICAO_ESCOPO = {
+    1: ("Emissões Diretas — fontes sob controle operacional da empresa "
+        "(combustão estacionária/móvel, processos e emissões fugitivas)."),
+    2: ("Emissões Indiretas de Energia — eletricidade, vapor ou calor "
+        "adquiridos de terceiros."),
+    3: ("Outras Emissões Indiretas — cadeia de fornecimento, transporte "
+        "terceirizado, viagens, resíduos etc."),
+}
+
+COR_ESCOPO = {1: "#c0392b", 2: "#d35400", 3: "#2980b9"}
 
 STATUS_COR = {
     "ISENTO":                           "#27ae60",
@@ -37,72 +59,52 @@ class TelaMotorIA(tk.Frame):
     def __init__(self, master):
         super().__init__(master, bg=COR_FUNDO)
         self._atividades: list[dict] = []
+        # Para cada aba (escopo), um conjunto independente de widgets dinâmicos
+        self._abas: dict[int, dict] = {}
         self._build()
 
+    # ── Construção da tela ─────────────────────────────────────────────────
     def _build(self):
+        # Cabeçalho
         tk.Label(
             self, text="Motor IA — Cálculo Preciso de Emissões",
             font=("Arial", 13, "bold"), fg=COR_VERDE_ESCURO, bg=COR_FUNDO,
-        ).pack(pady=(16, 2))
+        ).pack(pady=(12, 2))
 
         tk.Label(
             self,
-            text="Informe as atividades da empresa. O motor calcula tCO2e com fatores IPCC AR6 + MCTI.",
+            text="Calculadoras separadas por Escopo (GHG Protocol). "
+                 "Tudo é consolidado no inventário automaticamente.",
             font=("Arial", 9, "italic"), fg="#7f8c8d", bg=COR_FUNDO,
-        ).pack(pady=(0, 10))
-
-        # ── Painel de entrada de atividade ────────────────────────────────
-        frame_entrada = tk.LabelFrame(
-            self, text=" Nova Atividade ",
-            font=("Arial", 10, "bold"), bg=COR_FUNDO, fg=COR_VERDE_ESCURO,
-        )
-        frame_entrada.pack(padx=24, fill=tk.X, pady=(0, 8))
-
-        # Linha 1: tipo de cálculo + escopo
-        linha1 = tk.Frame(frame_entrada, bg=COR_FUNDO)
-        linha1.pack(fill=tk.X, padx=10, pady=6)
-
-        tk.Label(linha1, text="Tipo:", font=FONTE_NORMAL, bg=COR_FUNDO, fg=COR_TEXTO, width=12, anchor="e").pack(side=tk.LEFT)
-        self._var_tipo = tk.StringVar(value="combustivel")
-        combo_tipo = ttk.Combobox(
-            linha1, textvariable=self._var_tipo,
-            values=[LABELS_TIPO[t] for t in TIPOS_CALCULO],
-            width=28, state="readonly", font=FONTE_NORMAL,
-        )
-        combo_tipo.pack(side=tk.LEFT, padx=(4, 20))
-        combo_tipo.bind("<<ComboboxSelected>>", lambda _: self._atualizar_campos())
-
-        # Campos dinâmicos — frame que muda com o tipo
-        self._frame_campos = tk.Frame(frame_entrada, bg=COR_FUNDO)
-        self._frame_campos.pack(fill=tk.X, padx=10, pady=(0, 4))
-        self._widgets_dinamicos: dict[str, tk.Widget] = {}
-        self._atualizar_campos()
-
-        tk.Button(
-            frame_entrada, text="+ Adicionar Atividade",
-            command=self._adicionar_atividade,
-            bg=COR_AZUL, fg="white", font=("Arial", 9, "bold"),
-            relief=tk.FLAT, cursor="hand2", padx=10, pady=4,
         ).pack(pady=(0, 8))
 
-        # ── Lista de atividades adicionadas ───────────────────────────────
+        # ── Notebook com 3 abas (uma por escopo) ──────────────────────────
+        self._notebook = ttk.Notebook(self)
+        self._notebook.pack(padx=18, fill=tk.BOTH, expand=False, pady=(0, 6))
+
+        for escopo in (1, 2, 3):
+            frame = tk.Frame(self._notebook, bg=COR_FUNDO)
+            self._notebook.add(frame, text=f"  ESCOPO {escopo}  ")
+            self._build_aba_escopo(frame, escopo)
+
+        # ── Lista consolidada de atividades adicionadas ───────────────────
         frame_lista = tk.LabelFrame(
-            self, text=" Atividades Adicionadas ",
+            self, text=" Inventário Consolidado (todas as atividades) ",
             font=("Arial", 10, "bold"), bg=COR_FUNDO, fg=COR_VERDE_ESCURO,
         )
-        frame_lista.pack(padx=24, fill=tk.BOTH, expand=True, pady=(0, 6))
+        frame_lista.pack(padx=18, fill=tk.BOTH, expand=True, pady=(2, 6))
 
         cols = ttk.Treeview(
             frame_lista,
             columns=("escopo", "tipo", "detalhe", "tco2e"),
-            show="headings", height=6,
+            show="headings", height=5,
         )
         cols.heading("escopo",  text="Escopo")
-        cols.heading("tipo",    text="Tipo")
+        cols.heading("tipo",    text="Tipo de Atividade")
         cols.heading("detalhe", text="Detalhe")
         cols.heading("tco2e",   text="tCO2e")
         cols.column("escopo",  width=70,  anchor="center")
-        cols.column("tipo",    width=160, anchor="w")
+        cols.column("tipo",    width=180, anchor="w")
         cols.column("detalhe", width=280, anchor="w")
         cols.column("tco2e",   width=120, anchor="e")
         sb = ttk.Scrollbar(frame_lista, orient=tk.VERTICAL, command=cols.yview)
@@ -130,129 +132,204 @@ class TelaMotorIA(tk.Frame):
         self._label_totais = tk.Label(
             self, text="", font=("Courier", 10), fg=COR_TEXTO, bg=COR_FUNDO,
         )
-        self._label_totais.pack()
+        self._label_totais.pack(pady=(0, 4))
 
-        # Botões finais
-        btn_frame = tk.Frame(self, bg=COR_FUNDO)
-        btn_frame.pack(pady=10)
+        # ── Botões finais (integração com inventário) ────────────────────
+        frame_btns = tk.Frame(self, bg=COR_FUNDO)
+        frame_btns.pack(pady=(0, 12))
 
         tk.Button(
-            btn_frame, text="CALCULAR E SALVAR",
+            frame_btns,
+            text="✓ Gerar Inventário Automatizado",
             command=self._calcular_e_salvar,
             bg=COR_VERDE, fg="white", font=("Arial", 10, "bold"),
-            width=22, height=2, relief=tk.FLAT, cursor="hand2",
-        ).grid(row=0, column=0, padx=8)
+            width=30, height=2, relief=tk.FLAT, cursor="hand2",
+        ).pack(side=tk.LEFT, padx=6)
 
         tk.Button(
-            btn_frame, text="← Voltar", command=self.master.ir_para_principal,
+            frame_btns, text="← Voltar",
+            command=self.master.ir_para_principal,
             bg=COR_CINZA, fg="white", font=("Arial", 10, "bold"),
-            width=12, height=2, relief=tk.FLAT, cursor="hand2",
-        ).grid(row=0, column=1, padx=8)
+            width=14, height=2, relief=tk.FLAT, cursor="hand2",
+        ).pack(side=tk.LEFT, padx=6)
 
-    # ── Campos dinâmicos por tipo ─────────────────────────────────────────
+    # ── Construção de cada aba (escopo) ────────────────────────────────────
+    def _build_aba_escopo(self, parent: tk.Frame, escopo: int):
+        cor = COR_ESCOPO[escopo]
 
-    def _limpar_frame_campos(self):
-        for w in self._frame_campos.winfo_children():
-            w.destroy()
-        self._widgets_dinamicos.clear()
+        # Cabeçalho da aba
+        cab = tk.Frame(parent, bg=COR_FUNDO)
+        cab.pack(fill=tk.X, padx=10, pady=(8, 4))
 
-    def _label_entry(self, parent, row, col_offset, texto, key, width=12):
-        tk.Label(parent, text=texto, font=FONTE_NORMAL, bg=COR_FUNDO, fg=COR_TEXTO,
-                 width=16, anchor="e").grid(row=row, column=col_offset, pady=4, padx=(0, 4))
+        tk.Label(
+            cab, text=f"ESCOPO {escopo}",
+            font=("Arial", 12, "bold"), fg=cor, bg=COR_FUNDO,
+        ).pack(side=tk.LEFT)
+
+        tk.Label(
+            cab, text=DESCRICAO_ESCOPO[escopo],
+            font=("Arial", 9, "italic"), fg="#7f8c8d", bg=COR_FUNDO,
+            wraplength=600, justify="left",
+        ).pack(side=tk.LEFT, padx=(12, 0))
+
+        # Seletor de calculadora dentro do escopo
+        sel_frame = tk.Frame(parent, bg=COR_FUNDO)
+        sel_frame.pack(fill=tk.X, padx=10, pady=(4, 4))
+
+        tk.Label(sel_frame, text="Calculadora:", font=FONTE_NORMAL,
+                 bg=COR_FUNDO, fg=COR_TEXTO).pack(side=tk.LEFT, padx=(0, 6))
+
+        tipos_disponiveis = CALCULADORAS_POR_ESCOPO[escopo]
+        var_tipo = tk.StringVar(value=LABELS_TIPO[tipos_disponiveis[0]])
+        combo = ttk.Combobox(
+            sel_frame, textvariable=var_tipo,
+            values=[LABELS_TIPO[t] for t in tipos_disponiveis],
+            width=32, state="readonly", font=FONTE_NORMAL,
+        )
+        combo.pack(side=tk.LEFT)
+        combo.bind("<<ComboboxSelected>>", lambda _e, esc=escopo: self._atualizar_campos(esc))
+
+        # Frame onde os campos dinâmicos serão renderizados
+        frame_campos = tk.LabelFrame(
+            parent, text=" Dados da Atividade ",
+            font=("Arial", 9, "bold"), bg=COR_FUNDO, fg=cor,
+        )
+        frame_campos.pack(fill=tk.X, padx=10, pady=4)
+
+        btn_add = tk.Button(
+            parent, text="+ Adicionar ao Inventário",
+            command=lambda esc=escopo: self._adicionar_atividade(esc),
+            bg=cor, fg="white", font=("Arial", 9, "bold"),
+            relief=tk.FLAT, cursor="hand2", padx=10, pady=4,
+        )
+        btn_add.pack(pady=(2, 8))
+
+        # Guarda o estado da aba
+        self._abas[escopo] = {
+            "var_tipo": var_tipo,
+            "var_tipo_interno": tipos_disponiveis[0],
+            "frame_campos": frame_campos,
+            "widgets": {},
+        }
+        self._atualizar_campos(escopo)
+
+    # ── Renderização dos campos dinâmicos por calculadora ─────────────────
+    def _label_entry(self, parent, row, col, label, key, width=10, escopo=1):
+        tk.Label(parent, text=label, font=FONTE_NORMAL,
+                 bg=COR_FUNDO, fg=COR_TEXTO).grid(
+            row=row, column=col, sticky="e", padx=4, pady=4)
         e = tk.Entry(parent, width=width, font=FONTE_NORMAL)
-        e.grid(row=row, column=col_offset + 1, pady=4, padx=(0, 16))
-        self._widgets_dinamicos[key] = e
+        e.grid(row=row, column=col + 1, sticky="w", padx=4, pady=4)
+        self._abas[escopo]["widgets"][key] = e
         return e
 
-    def _label_combo(self, parent, row, col_offset, texto, key, valores, width=20):
-        tk.Label(parent, text=texto, font=FONTE_NORMAL, bg=COR_FUNDO, fg=COR_TEXTO,
-                 width=16, anchor="e").grid(row=row, column=col_offset, pady=4, padx=(0, 4))
-        cb = ttk.Combobox(parent, values=valores, width=width, state="readonly", font=FONTE_NORMAL)
+    def _label_combo(self, parent, row, col, label, key, valores, width=18, escopo=1):
+        tk.Label(parent, text=label, font=FONTE_NORMAL,
+                 bg=COR_FUNDO, fg=COR_TEXTO).grid(
+            row=row, column=col, sticky="e", padx=4, pady=4)
+        cb = ttk.Combobox(parent, values=valores, width=width,
+                          state="readonly", font=FONTE_NORMAL)
         if valores:
-            cb.current(0)
-        cb.grid(row=row, column=col_offset + 1, pady=4, padx=(0, 16))
-        self._widgets_dinamicos[key] = cb
+            cb.set(valores[0])
+        cb.grid(row=row, column=col + 1, sticky="w", padx=4, pady=4)
+        self._abas[escopo]["widgets"][key] = cb
         return cb
 
-    def _atualizar_campos(self):
-        self._limpar_frame_campos()
-        label = self._var_tipo.get()
-        tipo = next((t for t, l in LABELS_TIPO.items() if l == label), "combustivel")
-        self._var_tipo_interno = tipo
-        f = self._frame_campos
+    def _atualizar_campos(self, escopo: int):
+        aba = self._abas[escopo]
+        # Limpa frame e widgets registrados
+        for w in aba["frame_campos"].winfo_children():
+            w.destroy()
+        aba["widgets"] = {}
+
+        label_atual = aba["var_tipo"].get()
+        tipo = next((t for t, l in LABELS_TIPO.items() if l == label_atual),
+                    CALCULADORAS_POR_ESCOPO[escopo][0])
+        aba["var_tipo_interno"] = tipo
+        f = aba["frame_campos"]
 
         if tipo == "combustivel":
-            self._label_combo(f, 0, 0, "Combustível:", "combustivel", listar_combustiveis(), width=22)
-            self._label_entry(f, 0, 2, "Quantidade:", "quantidade", 10)
+            self._label_combo(f, 0, 0, "Combustível:", "combustivel",
+                              listar_combustiveis(), width=22, escopo=escopo)
+            self._label_entry(f, 0, 2, "Quantidade:", "quantidade", 10, escopo=escopo)
             self._label_combo(f, 1, 0, "Categoria:", "categoria",
-                              ["combustivel_estacionario", "combustivel_movel"], width=22)
-            self._label_combo(f, 1, 2, "Escopo:", "escopo", ["1", "2", "3"], width=6)
+                              ["combustivel_estacionario", "combustivel_movel"],
+                              width=22, escopo=escopo)
+            # Escopo já fixo no contexto da aba (1)
+            tk.Label(f, text=f"Escopo: {escopo} (fixo)", font=FONTE_PEQUENA,
+                     bg=COR_FUNDO, fg="#7f8c8d").grid(row=1, column=2, columnspan=2,
+                                                       sticky="w", padx=4)
 
         elif tipo == "eletricidade":
-            self._label_entry(f, 0, 0, "Consumo (kWh):", "kwh", 14)
+            self._label_entry(f, 0, 0, "Consumo (kWh):", "kwh", 14, escopo=escopo)
 
         elif tipo == "refrigerante":
-            self._label_combo(f, 0, 0, "Refrigerante:", "refrigerante", listar_refrigerantes(), width=16)
-            self._label_entry(f, 0, 2, "Kg vazados:", "kg_vazados", 10)
+            self._label_combo(f, 0, 0, "Refrigerante:", "refrigerante",
+                              listar_refrigerantes(), width=16, escopo=escopo)
+            self._label_entry(f, 0, 2, "Kg vazados:", "kg_vazados", 10, escopo=escopo)
 
         elif tipo == "cadeia":
-            self._label_combo(f, 0, 0, "Setor:", "setor", listar_setores_cadeia(), width=26)
-            self._label_entry(f, 0, 2, "Valor (R$):", "valor_reais", 12)
+            self._label_combo(f, 0, 0, "Setor:", "setor",
+                              listar_setores_cadeia(), width=26, escopo=escopo)
+            self._label_entry(f, 0, 2, "Valor (R$):", "valor_reais", 12, escopo=escopo)
 
         elif tipo == "transporte":
-            self._label_entry(f, 0, 0, "Distância (km):", "km", 10)
-            self._label_entry(f, 0, 2, "Toneladas:", "toneladas", 8)
+            self._label_entry(f, 0, 0, "Distância (km):", "km", 10, escopo=escopo)
+            self._label_entry(f, 0, 2, "Toneladas:", "toneladas", 8, escopo=escopo)
             self._label_combo(f, 1, 0, "Veículo:", "veiculo",
                               ["caminhao_diesel", "caminhao_leve", "van_diesel",
-                               "trem", "navio", "aviao_carga"], width=20)
+                               "trem", "navio", "aviao_carga"], width=20, escopo=escopo)
 
-    def _get_valor(self, key: str, default="") -> str:
-        w = self._widgets_dinamicos.get(key)
+    def _get_valor(self, escopo: int, key: str, default="") -> str:
+        w = self._abas[escopo]["widgets"].get(key)
         if w is None:
             return default
         if isinstance(w, ttk.Combobox):
             return w.get()
         return w.get().strip()
 
-    def _adicionar_atividade(self):
-        tipo = getattr(self, "_var_tipo_interno", "combustivel")
+    # ── Adição/remoção de atividades ──────────────────────────────────────
+    def _adicionar_atividade(self, escopo: int):
+        tipo = self._abas[escopo]["var_tipo_interno"]
         item: dict = {"tipo_calculo": tipo}
 
         try:
             if tipo == "combustivel":
-                item["combustivel"] = self._get_valor("combustivel")
-                item["quantidade"] = float(self._get_valor("quantidade") or "0")
-                item["categoria"] = self._get_valor("categoria")
-                item["escopo"] = int(self._get_valor("escopo") or "1")
+                item["combustivel"] = self._get_valor(escopo, "combustivel")
+                item["quantidade"] = float(self._get_valor(escopo, "quantidade") or "0")
+                item["categoria"] = self._get_valor(escopo, "categoria")
+                item["escopo"] = escopo
                 detalhe = f"{item['combustivel']} — {item['quantidade']} un"
             elif tipo == "eletricidade":
-                item["kwh"] = float(self._get_valor("kwh") or "0")
+                item["kwh"] = float(self._get_valor(escopo, "kwh") or "0")
                 detalhe = f"{item['kwh']:,.1f} kWh"
             elif tipo == "refrigerante":
-                item["refrigerante"] = self._get_valor("refrigerante")
-                item["kg_vazados"] = float(self._get_valor("kg_vazados") or "0")
+                item["refrigerante"] = self._get_valor(escopo, "refrigerante")
+                item["kg_vazados"] = float(self._get_valor(escopo, "kg_vazados") or "0")
                 detalhe = f"{item['refrigerante']} — {item['kg_vazados']} kg"
             elif tipo == "cadeia":
-                item["setor"] = self._get_valor("setor")
-                item["valor_reais"] = float(self._get_valor("valor_reais") or "0")
+                item["setor"] = self._get_valor(escopo, "setor")
+                item["valor_reais"] = float(self._get_valor(escopo, "valor_reais") or "0")
                 detalhe = f"{item['setor']} — R$ {item['valor_reais']:,.2f}"
             elif tipo == "transporte":
-                item["km"] = float(self._get_valor("km") or "0")
-                item["toneladas"] = float(self._get_valor("toneladas") or "1")
-                item["veiculo"] = self._get_valor("veiculo")
+                item["km"] = float(self._get_valor(escopo, "km") or "0")
+                item["toneladas"] = float(self._get_valor(escopo, "toneladas") or "1")
+                item["veiculo"] = self._get_valor(escopo, "veiculo")
                 detalhe = f"{item['veiculo']} — {item['km']} km × {item['toneladas']} t"
         except ValueError:
             messagebox.showwarning("Atenção", "Preencha os valores numéricos corretamente.")
             return
 
-        # Preview do tCO2e antes de adicionar
+        # Calcula tCO2e desta atividade isoladamente (para preview)
         relatorio = calcular_inventario([item])
         tco2e = relatorio.total_tco2e
-        escopo = item.get("escopo", 2 if tipo == "eletricidade" else 3 if tipo in ("cadeia", "transporte") else 1)
+        escopo_real = item.get("escopo",
+                               2 if tipo == "eletricidade"
+                               else 3 if tipo in ("cadeia", "transporte") else 1)
 
         self._atividades.append(item)
         self._tree.insert("", tk.END, values=(
-            f"Escopo {escopo}",
+            f"Escopo {escopo_real}",
             LABELS_TIPO.get(tipo, tipo),
             detalhe,
             f"{tco2e:,.6f} tCO2e",
@@ -270,6 +347,10 @@ class TelaMotorIA(tk.Frame):
         self._atualizar_totais()
 
     def _limpar_tudo(self):
+        if not self._atividades:
+            return
+        if not messagebox.askyesno("Limpar", "Remover todas as atividades adicionadas?"):
+            return
         self._atividades.clear()
         for item in self._tree.get_children():
             self._tree.delete(item)
@@ -289,84 +370,38 @@ class TelaMotorIA(tk.Frame):
             status = "CONFORMIDADE TOTAL OBRIGATÓRIA"
         cor = STATUS_COR.get(status, COR_TEXTO)
         texto = (
-            f"Escopo 1: {relatorio.escopo1_total:>12,.4f} tCO2e  |  "
-            f"Escopo 2: {relatorio.escopo2_total:>12,.4f} tCO2e  |  "
-            f"Escopo 3: {relatorio.escopo3_total:>12,.4f} tCO2e  |  "
-            f"TOTAL: {total:>12,.4f} tCO2e  →  {status}"
+            f"Escopo 1: {relatorio.escopo1_total:>10,.4f}  |  "
+            f"Escopo 2: {relatorio.escopo2_total:>10,.4f}  |  "
+            f"Escopo 3: {relatorio.escopo3_total:>10,.4f}  |  "
+            f"TOTAL: {total:>10,.4f} tCO2e  →  {status}"
         )
         self._label_totais.config(text=texto, fg=cor)
 
+    # ── INTEGRAÇÃO AUTOMATIZADA com a Tela de Emissões ────────────────────
     def _calcular_e_salvar(self):
         if not self._atividades:
-            messagebox.showwarning("Atenção", "Adicione pelo menos uma atividade.")
+            messagebox.showwarning(
+                "Atenção",
+                "Adicione pelo menos uma atividade em alguma das abas de Escopo "
+                "antes de gerar o inventário.",
+            )
             return
 
         relatorio = calcular_inventario(self._atividades)
         campos = relatorio.para_emissao_dict()
 
-        # Navegar para tela de emissões pré-preenchida
+        # Mostra resumo e confirma envio para inventário
+        resumo = (
+            f"As atividades calculadas serão enviadas ao Inventário:\n\n"
+            f"  • Escopo 1: {relatorio.escopo1_total:,.4f} tCO2e\n"
+            f"  • Escopo 2: {relatorio.escopo2_total:,.4f} tCO2e\n"
+            f"  • Escopo 3: {relatorio.escopo3_total:,.4f} tCO2e\n"
+            f"  ───────────────────────────────────\n"
+            f"  TOTAL: {relatorio.total_tco2e:,.4f} tCO2e\n\n"
+            f"Continuar?"
+        )
+        if not messagebox.askyesno("Gerar Inventário Automatizado", resumo):
+            return
+
+        # Navega para tela de emissões pré-preenchida
         self.master.ir_para_emissoes_preenchidas(campos, relatorio.total_tco2e)
-
-
-class DialogoEmpresa(tk.Toplevel):
-    """Diálogo para coletar dados da empresa antes de salvar o inventário IA."""
-    def __init__(self, parent, campos: dict, total_tco2e: float):
-        super().__init__(parent)
-        self.title("Dados da Empresa — Inventário IA")
-        self.geometry("440x260")
-        self.resizable(False, False)
-        self.configure(bg=COR_FUNDO)
-        self.grab_set()
-        self._campos = campos
-        self._total = total_tco2e
-        self.resultado = None
-        self._build()
-
-    def _build(self):
-        tk.Label(self, text="Complete os dados da empresa:", font=("Arial", 11, "bold"),
-                 fg=COR_VERDE_ESCURO, bg=COR_FUNDO).pack(pady=(16, 10))
-
-        form = tk.Frame(self, bg=COR_FUNDO)
-        form.pack(padx=30)
-
-        def campo(row, label, key):
-            tk.Label(form, text=label, font=FONTE_NORMAL, bg=COR_FUNDO, fg=COR_TEXTO,
-                     anchor="e", width=18).grid(row=row, column=0, pady=6, padx=(0, 8))
-            e = tk.Entry(form, width=24, font=FONTE_NORMAL)
-            e.grid(row=row, column=1, pady=6)
-            return e
-
-        self._empresa = campo(0, "Empresa / Razão Social:", "empresa")
-        self._cnpj    = campo(1, "CNPJ / CPF:", "cnpj")
-        self._ano     = campo(2, "Ano de Referência:", "ano")
-        self._ano.insert(0, "2024")
-
-        btn_frame = tk.Frame(self, bg=COR_FUNDO)
-        btn_frame.pack(pady=14)
-
-        tk.Button(btn_frame, text="SALVAR", command=self._salvar,
-                  bg=COR_VERDE, fg="white", font=("Arial", 10, "bold"),
-                  width=14, relief=tk.FLAT).grid(row=0, column=0, padx=8)
-
-        tk.Button(btn_frame, text="Cancelar", command=self.destroy,
-                  bg=COR_CINZA, fg="white", font=("Arial", 10, "bold"),
-                  width=10, relief=tk.FLAT).grid(row=0, column=1, padx=8)
-
-    def _salvar(self):
-        empresa = self._empresa.get().strip()
-        cnpj    = self._cnpj.get().strip()
-        try:
-            ano = int(self._ano.get().strip())
-        except ValueError:
-            messagebox.showwarning("Atenção", "Ano inválido.", parent=self)
-            return
-        if not empresa:
-            messagebox.showwarning("Atenção", "Informe a empresa.", parent=self)
-            return
-        self.resultado = {
-            "empresa": empresa,
-            "cnpj_cpf": cnpj,
-            "ano_referencia": ano,
-            **self._campos,
-        }
-        self.destroy()

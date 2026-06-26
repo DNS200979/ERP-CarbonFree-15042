@@ -1,0 +1,18 @@
+# Variáveis de ambiente
+.env
+env.txt
+
+# Certificados gerados localmente
+certificados/
+certificado_*.pdf
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.ruff_cache/
+
+# Ambientes virtuais locais
+.venv/
+venv/
