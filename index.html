@@ -1677,7 +1677,14 @@ function loadConfig() {
   document.getElementById('sample-base').textContent = state.apiUrl || 'http://localhost:8000';
 }
 
+// Backend hospedado na Vercel — usado quando a página é servida por um
+// host estático (GitHub Pages) que não roda o FastAPI/uvicorn.
+const PRODUCTION_API_URL = 'https://erp-carbonfree-15042.vercel.app';
+
 function autoDetectApiUrl() {
+  if (window.location.hostname.endsWith('github.io')) {
+    return PRODUCTION_API_URL;
+  }
   if (window.location.protocol.startsWith('http')) {
     return window.location.origin;
   }
