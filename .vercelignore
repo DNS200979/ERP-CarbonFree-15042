@@ -1,0 +1,8 @@
+*.bak.*
+*.bak-mrv
+__pycache__/
+*.pyc
+.venv/
+venv/
+certificados/
+ERP-CarbonFree-15042-docs/
