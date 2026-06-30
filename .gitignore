@@ -16,3 +16,6 @@ __pycache__/
 # Ambientes virtuais locais
 .venv/
 venv/
+
+.vercel
+.env*
