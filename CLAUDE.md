@@ -30,15 +30,50 @@ Repositório: `github.com/DNS200979/ERP-CarbonFree-15042`
   combustível, eletricidade, refrigerante, cadeia, transporte). Fatores
   IPCC / GHG Protocol Brasil.
 - `app/api/routes/calculadoras.py` — endpoints atômicos das calculadoras + histórico.
+  Quando `salvar=true`, a resposta traz `historico_id` (id da linha gravada em
+  `historico_calculos`), usado pelo frontend para anexar evidências ao cálculo.
+- `app/api/routes/mrv_mensal.py` — endpoints do MRV mensal
+  (`/mrv/setores`, `/mrv/calcular`, `/mrv/fechamentos`, `/mrv/consolidado/{ano}`).
+- `app/api/routes/documentos.py` — anexo de evidências (upload/listar/URL
+  assinada/remover), vinculado a um cálculo (`historico`) ou fechamento MRV
+  (`fechamento`), com escopo opcional a um insumo. Ver seção "Evidências" abaixo.
 - `app/services/motor_verificacao.py` — motor de verificação/pré-auditoria
-  ISO 14064-3 (materialidade, risco, amostragem, parecer).
+  ISO 14064-3 (materialidade, risco, amostragem, parecer). *(pendente — ver roadmap)*
 - `app/api/routes/verificacao.py` — endpoints da verificação
-  (`/verificacao/analisar`, `/verificacao/metodologia`).
+  (`/verificacao/analisar`, `/verificacao/metodologia`). *(pendente — ver roadmap)*
 - `app/api/routes/certificados.py` — certificados rurais.
 - `app/services/orgaos_ambientais.py` — adapter de dados abertos do IBAMA.
 - `app/api/auth.py` — `usuario_autenticado` (valida JWT do Supabase).
-- `app/database/client.py` — `get_db_client()` (cliente Supabase com service key).
+- `app/database/client.py` — `get_db_client()` (Supabase com service key) e
+  `get_storage_client()` (mesmo cliente, para o Storage de evidências).
 - `index.html` — SPA completa.  `mrv_mensal.html` — MRV mensal.
+
+## Evidências / documentos anexados
+
+Upload de documentos de referência (NF-e, laudos, faturas, MTR, certificados de
+calibração) como evidência de um cálculo ou fechamento MRV — base da trilha de
+evidências para o dossiê de verificação (OVV).
+
+- **Endpoints** (`app/api/routes/documentos.py`, prefix `/api/v1/documentos`):
+  `POST /upload` (multipart), `GET /` (listar por alvo), `GET /{id}/url` (URL
+  assinada de 5 min para download), `DELETE /{id}` (soft-delete).
+- **Storage:** bucket **privado** `evidencias-compliance` (Supabase Storage).
+  Todo acesso passa pelo backend com a service key — o browser nunca fala direto
+  com o Storage. Chave do objeto: `{usuario_id}/{tipo_alvo}/{alvo_id}/{uuid}_{nome}`.
+- **Tabela:** `documentos_evidencia` (linkagem polimórfica: `historico_id` **ou**
+  `fechamento_id`, + `insumo_chave` opcional; `removido_em` para soft-delete).
+- **Limites:** 10 MB/arquivo; allow-list de mime (PDF, imagem, DOCX/XLSX/XLS, XML,
+  TXT); checagem de magic bytes (`_ASSINATURAS_POR_MIME` em `documentos.py` — o
+  conteúdo deve bater com o mime declarado). Constantes em `app/config.py`.
+- **Autorização:** o dono do alvo é validado na camada FastAPI (a service key
+  ignora RLS), mesmo padrão de `historico_calculos`/`fechamentos_mensais`.
+- **Infra manual:** bucket + tabela são criados por SQL rodado à mão no Supabase
+  (não há tooling de migração) — o script vive no plano de implementação.
+- **Frontend:** modal `#doc-modal` + funções `abrirDocumentos`/`enviarDocumento`/
+  `carregarDocumentos`/`abrirUrlDocumento`/`removerDocumento` em `index.html`
+  (espelham o padrão de upload multipart do import de ECF, `lerECFInventario`).
+  Botão de anexo na aba Histórico das calculadoras, no card de resultado e na
+  tabela de fechamentos MRV.
 
 ## Validação (rodar SEMPRE após editar — não há suite de testes ainda)
 
@@ -105,8 +140,26 @@ Definida no `tailwind.config` do `index.html`:
 
 ## Pendências / roadmap
 
+Melhorias MRV/Calculadora derivadas do estudo da Lei 15.042 (4 fases):
+
+- ✅ **Fase 1 — Evidências/documentos** (feita): ver seção "Evidências" acima.
+- **Fase 2 — Fatores de emissão versionados**: mover os dicts hardcoded
+  (`FATORES_*`/`GWP_SETS` em `motor_ia.py`, `SETORES_ETAPA1` em `mrv_mensal.py`)
+  para uma tabela `fatores_emissao` no Supabase com `vigencia_inicio/fim` —
+  atualizar fator sem deploy e reproduzir cálculo histórico pelo fator da época.
+- **Fase 3 — Trilha de auditoria + aprovação**: colunas `status`
+  (`rascunho`/`validado`/`aprovado`), `validado_por/em`, `aprovado_por/em` em
+  `historico_calculos` e `fechamentos_mensais`, + tabela `eventos_auditoria`.
+- **Fase 4 — Motor de verificação + dossiê**: implementar `motor_verificacao.py`
+  e `verificacao.py` (parecer com materialidade 5% + amostragem) e exportar um
+  dossiê (cálculo + evidências da Fase 1 + trilha da Fase 3) para o OVV.
+
+Outras pendências:
+
 - Visualizador de PDF de inventários (`GET /api/v1/emissoes/{id}/pdf`).
 - Login: OAuth Google/Microsoft, convite por e-mail, tela "Sessão encerrada".
 - Parecer de inventário na UI (botão no Histórico ou no detalhe da emissão).
   Requer persistir `nivel_tier` e `incerteza_pct` por fonte para alimentar o
   `/verificacao/analisar`.
+- Limpeza de objetos órfãos no Storage: apagar um cálculo/fechamento faz
+  cascade na linha de `documentos_evidencia`, mas não remove o arquivo do bucket.
