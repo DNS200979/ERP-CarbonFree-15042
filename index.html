@@ -439,6 +439,50 @@
     font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: #5a8527; font-weight: 700;
   }
   .mem-total { font-family: 'JetBrains Mono', monospace; font-size: 0.92rem; font-weight: 700; color: var(--mbv-dark); }
+
+  /* ===== MRV Mensal — view integrada (estilos isolados sob #view-mrvmensal) ===== */
+  #view-mrvmensal{ --dark:#152417; --surface:#1e3321; --green:#8cbd41; --olive:#b0a94e; --lime:#d4e9a8; }
+  #view-mrvmensal .card{background:#fff;border:1px solid #e5e3d8;border-radius:14px;padding:20px;margin-bottom:18px;}
+  #view-mrvmensal .row{display:flex;flex-wrap:wrap;gap:14px;}
+  #view-mrvmensal .field{flex:1 1 180px;}
+  #view-mrvmensal label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5b6b5e;margin-bottom:5px;}
+  #view-mrvmensal input,#view-mrvmensal select{width:100%;padding:.55rem .7rem;border:1px solid #d6d3c0;border-radius:8px;font-size:.9rem;background:#fff;color:#1f2937;}
+  #view-mrvmensal input:focus,#view-mrvmensal select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(140,189,65,.18);}
+  #view-mrvmensal input.mini{padding:.4rem .5rem;font-size:.82rem;text-align:right;font-family:ui-monospace,monospace;}
+  #view-mrvmensal button{cursor:pointer;border:none;border-radius:8px;font-weight:600;font-size:.9rem;padding:.6rem 1.1rem;}
+  #view-mrvmensal .mrv-btn-primary{background:var(--dark);color:#fff;}
+  #view-mrvmensal .mrv-btn-primary:hover{background:var(--surface);}
+  #view-mrvmensal .mrv-btn-accent{background:var(--green);color:var(--dark);font-weight:700;}
+  #view-mrvmensal .mrv-btn-accent:hover{background:#7eaa3a;}
+  #view-mrvmensal .btn-sec{background:#fff;border:1px solid #d6d3c0;color:var(--dark);}
+  #view-mrvmensal .muted{font-size:.8rem;color:#6b7280;}
+  #view-mrvmensal table{width:100%;border-collapse:collapse;font-size:.83rem;}
+  #view-mrvmensal th,#view-mrvmensal td{text-align:left;padding:.5rem .55rem;border-bottom:1px solid #ecebe0;vertical-align:middle;}
+  #view-mrvmensal th{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:#5b6b5e;background:#faf9f3;}
+  #view-mrvmensal td.num,#view-mrvmensal th.num{text-align:right;font-family:ui-monospace,monospace;}
+  #view-mrvmensal .mrv-badge{display:inline-block;padding:.22rem .55rem;border-radius:999px;font-size:.68rem;font-weight:700;white-space:nowrap;}
+  #view-mrvmensal .b-ok{background:#dcfce7;color:#15803d;}
+  #view-mrvmensal .b-warn{background:#fef3c7;color:#b45309;}
+  #view-mrvmensal .b-err{background:#fee2e2;color:#b91c1c;}
+  #view-mrvmensal .b-bio{background:#e0f2fe;color:#075985;}
+  #view-mrvmensal .b-neutral{background:#f3f4f6;color:#6b7280;}
+  #view-mrvmensal .res{background:var(--dark);color:#fff;border-radius:12px;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+  #view-mrvmensal .res .mrv-lbl{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--olive);}
+  #view-mrvmensal .res .val{font-family:ui-monospace,monospace;font-size:1.05rem;margin-top:2px;}
+  #view-mrvmensal .res .val.big{color:var(--green);font-weight:700;}
+  #view-mrvmensal .mrv-msg{padding:.6rem .8rem;border-radius:8px;font-size:.85rem;margin-top:10px;display:none;white-space:pre-line;}
+  #view-mrvmensal .mrv-msg.show{display:block;}
+  #view-mrvmensal .mrv-msg.err{background:#fee2e2;color:#991b1b;}
+  #view-mrvmensal .mrv-msg.ok{background:#dcfce7;color:#166534;}
+  #view-mrvmensal .hint{font-size:.78rem;color:#7a751b;background:#faf7e8;border:1px solid #e7e0c0;border-radius:8px;padding:.6rem .8rem;margin-top:10px;}
+  #view-mrvmensal .eq{background:linear-gradient(135deg,var(--dark) 0%,var(--surface) 100%);color:var(--lime);border-radius:12px;padding:14px 18px;font-family:ui-monospace,monospace;font-size:.85rem;margin-bottom:18px;border:1px solid #2c4630;}
+  #view-mrvmensal .eq b{color:var(--green);}
+  #view-mrvmensal .mes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;margin-top:10px;}
+  #view-mrvmensal .mes-cell{border:1px solid #e5e3d8;border-radius:8px;padding:.45rem .3rem;text-align:center;font-size:.7rem;background:#faf9f3;}
+  #view-mrvmensal .mes-cell.done{background:#dcfce7;border-color:#86efac;color:#166534;font-weight:700;}
+  #view-mrvmensal .mes-cell .v{display:block;font-family:ui-monospace,monospace;font-size:.68rem;margin-top:2px;color:#374151;}
+  #view-mrvmensal .avisos{font-size:.72rem;color:#b45309;margin-top:2px;}
+  #view-mrvmensal .tag-dir{font-size:.6rem;color:#075985;background:#e0f2fe;border-radius:4px;padding:.05rem .3rem;margin-left:4px;}
 </style>
 </head>
 <body class="agro-texture">
@@ -462,7 +506,7 @@
       <div class="px-3 pb-2 pt-1 text-[10px] uppercase tracking-widest text-mbv-olive font-bold">Operação</div>
       <a class="sidebar-link active" data-view="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</a>
       <a class="sidebar-link" data-view="emissoes"><i data-lucide="factory"></i> Inventário GEE</a>
-      <a class="sidebar-link" href="http://localhost:8000/mrv"><i data-lucide="calendar-check"></i> Fechamento Mensal MRV</a>
+      <a class="sidebar-link" data-view="mrvmensal"><i data-lucide="calendar-check"></i> Fechamento Mensal MRV</a>
       <a class="sidebar-link" data-view="calculadoras"><i data-lucide="calculator"></i> Calculadoras IA</a>
       <a class="sidebar-link" data-view="ativos"><i data-lucide="coins"></i> Ativos CBE / CRVE</a>
 
@@ -1100,6 +1144,135 @@
                   <tr><td colspan="7" class="empty-state">Carregando histórico…</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== VIEW: FECHAMENTO MENSAL MRV ===================== -->
+      <section id="view-mrvmensal" class="view">
+        <div class="mb-6" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h1 class="section-title">Fechamento Mensal MRV — 1ª Etapa SBCE (2027)</h1>
+            <p class="section-subtitle">Balanço de massa mensal por setor regulado, conciliação Bloco K (SPED Fiscal) e memória de cálculo auditável. Lei 15.042/2024.</p>
+          </div>
+          <button class="btn-secondary text-xs" onclick="navigateTo('dashboard')">← Voltar ao painel</button>
+        </div>
+
+        <div class="eq">
+          Regra de fechamento: <b>Estoque Inicial</b> + <b>Entradas (NF-e)</b> − <b>Estoque Final</b> = <b>Consumo Mensal</b> → deve bater com o <b>Bloco K</b>
+        </div>
+
+        <!-- Identificação da competência -->
+        <div class="card">
+          <div class="row">
+            <div class="field" style="flex:2 1 240px;"><label>Empresa / Razão social</label><input id="mrv-empresa" placeholder="Cimentos Exemplo S.A."/></div>
+            <div class="field"><label>CNPJ</label><input id="mrv-cnpj" placeholder="00.000.000/0001-00"/></div>
+            <div class="field"><label>Setor (Etapa 1)</label><select id="mrv-setor" onchange="mrvRenderInsumos(); mrvCarregarFechamentos();"></select></div>
+            <div class="field" style="flex:0 1 110px;"><label>Ano</label><input id="mrv-ano" type="number" value="2027" onchange="mrvCarregarFechamentos()"/></div>
+            <div class="field" style="flex:0 1 150px;"><label>Mês</label>
+              <select id="mrv-mes">
+                <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+                <option value="3">Março</option><option value="4">Abril</option>
+                <option value="5">Maio</option><option value="6">Junho</option>
+                <option value="7">Julho</option><option value="8">Agosto</option>
+                <option value="9">Setembro</option><option value="10">Outubro</option>
+                <option value="11">Novembro</option><option value="12">Dezembro</option>
+              </select>
+            </div>
+            <div class="field" style="flex:0 1 130px;"><label>Tolerância Bloco K (%)</label><input id="mrv-tolerancia" type="number" step="0.1" value="2"/></div>
+          </div>
+          <div id="mrv-setor-info" class="hint" style="display:none;"></div>
+        </div>
+
+        <!-- Insumos do layout (gerado dinamicamente) -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <div style="font-weight:700;color:var(--dark);">Insumos / fluxos de processo do mês <span id="mrv-layout-tag" class="mrv-badge b-neutral"></span></div>
+            <div class="muted">Preview local atualiza ao digitar · o valor oficial vem do backend ao clicar em Calcular</div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr>
+                <th>Insumo</th>
+                <th class="num">Estoque inicial</th>
+                <th class="num">Entradas NF-e</th>
+                <th class="num">Estoque final</th>
+                <th class="num">Consumo medido*</th>
+                <th class="num">Bloco K</th>
+                <th class="num">Consumo apurado</th>
+                <th class="num">Emissão (tCO₂e)</th>
+              </tr></thead>
+              <tbody id="mrv-tbl-insumos">
+                <tr><td colspan="8" class="muted" style="text-align:center;padding:1.2rem;">Carregando catálogo de setores…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="muted" style="margin-top:8px;">* Consumo medido (telemetria, fatura, produção de clínquer): quando preenchido, substitui o balanço de massa daquele insumo.</div>
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="mrv-btn-primary" onclick="mrvCalcular()">Calcular fechamento</button>
+            <button class="mrv-btn-accent" id="mrv-btn-salvar" onclick="mrvSalvar()" style="display:none;">Gravar fechamento do mês</button>
+          </div>
+          <div id="mrv-msg" class="mrv-msg"></div>
+        </div>
+
+        <!-- Resultado -->
+        <div class="card" id="mrv-result-card" style="display:none;">
+          <div class="res">
+            <div><div class="mrv-lbl">Escopo 1</div><div class="val" id="mrv-r-e1">0</div></div>
+            <div><div class="mrv-lbl">Escopo 2</div><div class="val" id="mrv-r-e2">0</div></div>
+            <div><div class="mrv-lbl">Total do mês</div><div class="val big" id="mrv-r-total">0</div></div>
+            <div><div class="mrv-lbl">Biogênico (qtd)</div><div class="val" id="mrv-r-bio">0</div></div>
+            <div><div class="mrv-lbl">Conciliação SPED</div><div id="mrv-r-conc">—</div></div>
+          </div>
+          <div style="overflow-x:auto;margin-top:14px;">
+            <table>
+              <thead><tr>
+                <th>Insumo</th><th>Tipo de emissão</th><th class="num">Consumo</th>
+                <th class="num">Fator</th><th class="num">tCO₂e</th>
+                <th class="num">Δ Bloco K</th><th>Status</th>
+              </tr></thead>
+              <tbody id="mrv-r-detalhes"></tbody>
+            </table>
+          </div>
+          <div class="muted" style="margin-top:10px;">Hash de auditoria (SHA-256): <span id="mrv-r-hash" style="font-family:ui-monospace,monospace;font-size:.72rem;"></span></div>
+        </div>
+
+        <!-- Fechamentos do ano + consolidado -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="font-weight:700;color:var(--dark);">Fechamentos gravados — <span id="mrv-lbl-ano-lista">2027</span></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-sec" onclick="mrvCarregarFechamentos()">Atualizar</button>
+              <button class="btn-sec" onclick="mrvConsolidar()">Consolidar ano</button>
+            </div>
+          </div>
+          <div class="mes-grid" id="mrv-mes-grid"></div>
+          <div style="overflow-x:auto;margin-top:14px;">
+            <table>
+              <thead><tr>
+                <th>Competência</th><th>Empresa</th><th>Setor</th>
+                <th class="num">E1</th><th class="num">E2</th><th class="num">Total tCO₂e</th>
+                <th>Conciliação</th><th></th>
+              </tr></thead>
+              <tbody id="mrv-tbl-fechamentos">
+                <tr><td colspan="8" class="muted" style="text-align:center;padding:1rem;">Nenhum fechamento carregado ainda.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Consolidado anual -->
+          <div id="mrv-consolidado-card" style="display:none;margin-top:16px;">
+            <div class="res">
+              <div><div class="mrv-lbl">Total anual</div><div class="val big" id="mrv-c-total">0</div></div>
+              <div><div class="mrv-lbl">Status SBCE projetado</div><div id="mrv-c-status">—</div></div>
+              <div><div class="mrv-lbl">Meses fechados</div><div class="val" id="mrv-c-meses">0/12</div></div>
+              <div><div class="mrv-lbl">Divergências</div><div class="val" id="mrv-c-div">0</div></div>
+            </div>
+            <div id="mrv-c-faltantes" class="hint" style="display:none;"></div>
+            <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <button class="mrv-btn-accent" onclick="mrvGerarInventario()">Gerar inventário anual a partir dos 12 meses</button>
+              <span class="muted">Envia os campos consolidados para POST /api/v1/emissoes/ (a mesma automação anual que você já usa).</span>
             </div>
           </div>
         </div>
@@ -2031,6 +2204,7 @@ const VIEW_TITLES = {
   dashboard: 'Visão Geral',
   emissoes: 'Inventário GEE',
   calculadoras: 'Calculadoras IA',
+  mrvmensal: 'Fechamento Mensal MRV',
   ativos: 'Ativos CBE / CRVE',
   agro: 'Certificados Rurais',
   propriedades: 'Propriedades',
@@ -2051,6 +2225,7 @@ function navigateTo(view) {
   if (view === 'agro') carregarCertificados();
   if (view === 'dashboard') refreshDashboard();
   if (view === 'calculadoras') iniciarCalculadoras();
+  if (view === 'mrvmensal') mrvIniciar();
 }
 
 document.querySelectorAll('.sidebar-link[data-view]').forEach(a => {
@@ -3224,6 +3399,286 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => abrirModalLogin(), 200);
   }
 });
+
+/* ---------- Fechamento Mensal MRV ---------- */
+let MRV_CATALOGO = null, MRV_ULTIMO = null, MRV_CONSOLIDADO = null;
+
+function mrvMsg(t, k){
+  const e = document.getElementById('mrv-msg');
+  if (!e) return;
+  e.textContent = t;
+  e.className = 'mrv-msg show ' + (k || '');
+}
+
+async function mrvIniciar(){
+  if (!state.token){ abrirModalLogin(); toast('Faça login para usar o Fechamento Mensal MRV.', 'warn'); return; }
+  if (!MRV_CATALOGO){ await mrvCarregarCatalogo(); }
+  await mrvCarregarFechamentos();
+}
+
+function mrvBadgeConc(st){
+  if (st === 'CONCILIADO')  return '<span class="mrv-badge b-ok">CONCILIADO</span>';
+  if (st === 'DIVERGENTE')  return '<span class="mrv-badge b-err">DIVERGENTE</span>';
+  return '<span class="mrv-badge b-neutral">SEM BLOCO K</span>';
+}
+function mrvBadgeStatusSBCE(st){
+  if (st === 'ISENTO') return '<span class="mrv-badge b-ok">ISENTO</span>';
+  if ((st||'').startsWith('MONIT')) return '<span class="mrv-badge b-warn">MONITORAMENTO</span>';
+  return '<span class="mrv-badge b-err">CONFORMIDADE TOTAL</span>';
+}
+
+/* ---------- Catálogo de setores ---------- */
+async function mrvCarregarCatalogo(){
+  const token = state.token;
+  if (!token){
+    mrvMsg('Você não está autenticado nesta página. Volte ao painel, faça login e '
+          + 'reabra o Fechamento Mensal MRV pelo menu lateral.', 'err');
+    return;
+  }
+  try{
+    MRV_CATALOGO = await api('/api/v1/mrv/setores');
+    const sel = document.getElementById('mrv-setor');
+    sel.innerHTML = MRV_CATALOGO.setores.map(s =>
+      `<option value="${s.chave}">${s.rotulo} · ${s.layout}</option>`).join('');
+    document.getElementById('mrv-tolerancia').value = MRV_CATALOGO.tolerancia_padrao_pct;
+    mrvRenderInsumos();
+  } catch(e){
+    const dica = String(e.message).startsWith('401')
+      ? 'Volte ao painel, faça login e reabra o MRV pelo menu lateral.'
+      : 'Verifique se o backend está no ar com o router /api/v1/mrv.';
+    mrvMsg('Não consegui carregar o catálogo: ' + e.message + '\n' + dica, 'err');
+  }
+}
+
+function mrvSetorAtual(){
+  if (!MRV_CATALOGO) return null;
+  const chave = document.getElementById('mrv-setor').value;
+  return MRV_CATALOGO.setores.find(s => s.chave === chave) || null;
+}
+
+function mrvRenderInsumos(){
+  const s = mrvSetorAtual();
+  if (!s) return;
+  document.getElementById('mrv-layout-tag').textContent = s.layout;
+  const info = document.getElementById('mrv-setor-info');
+  info.style.display = 'block';
+  info.textContent = s.descricao;
+
+  const tbody = document.getElementById('mrv-tbl-insumos');
+  tbody.innerHTML = s.insumos.map(i => {
+    const bio = i.escopo === 'biogenico';
+    const tag = i.medicao_direta ? '<span class="tag-dir">medição direta</span>' : '';
+    const eTag = bio ? '<span class="mrv-badge b-bio">BIOGÊNICO</span>'
+               : i.escopo === 2 ? '<span class="mrv-badge b-warn">E2</span>'
+               : '<span class="mrv-badge b-neutral">E1</span>';
+    return `<tr data-insumo="${i.chave}">
+      <td><b>${i.rotulo}</b> ${tag}<br>
+          <span class="muted">${i.tipo_emissao} · fator ${i.fator} tCO₂e/${i.unidade}</span> ${eTag}</td>
+      <td class="num"><input class="mini bal" data-f="estoque_inicial" type="number" step="any" value="0" ${i.medicao_direta?'disabled style="opacity:.4"':''}></td>
+      <td class="num"><input class="mini bal" data-f="entradas_nfe" type="number" step="any" value="0" ${i.medicao_direta?'disabled style="opacity:.4"':''}></td>
+      <td class="num"><input class="mini bal" data-f="estoque_final" type="number" step="any" value="0" ${i.medicao_direta?'disabled style="opacity:.4"':''}></td>
+      <td class="num"><input class="mini bal" data-f="consumo_informado" type="number" step="any" placeholder="—"></td>
+      <td class="num"><input class="mini bal" data-f="bloco_k_consumo" type="number" step="any" placeholder="—"></td>
+      <td class="num"><span class="prev-consumo" style="font-family:ui-monospace,monospace;">0</span> <span class="muted">${i.unidade}</span></td>
+      <td class="num prev-emissao" style="font-family:ui-monospace,monospace;font-weight:700;">0,0000</td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('input.bal').forEach(inp => inp.addEventListener('input', mrvPreview));
+  mrvPreview();
+  document.getElementById('mrv-result-card').style.display = 'none';
+  document.getElementById('mrv-btn-salvar').style.display = 'none';
+  MRV_ULTIMO = null;
+}
+
+/* ---------- Preview local (espelho do backend) ---------- */
+function mrvLerItens(){
+  const s = mrvSetorAtual();
+  const itens = [];
+  document.querySelectorAll('#mrv-tbl-insumos tr[data-insumo]').forEach(tr => {
+    const item = { insumo: tr.dataset.insumo };
+    tr.querySelectorAll('input.bal').forEach(inp => {
+      const v = inp.value === '' ? null : parseFloat(inp.value);
+      item[inp.dataset.f] = (v === null || isNaN(v)) ? (inp.dataset.f.startsWith('estoque')||inp.dataset.f==='entradas_nfe' ? 0 : null) : v;
+    });
+    itens.push(item);
+  });
+  return itens;
+}
+
+function mrvPreview(){
+  const s = mrvSetorAtual();
+  if (!s) return;
+  const metaPorChave = Object.fromEntries(s.insumos.map(i => [i.chave, i]));
+  document.querySelectorAll('#mrv-tbl-insumos tr[data-insumo]').forEach(tr => {
+    const meta = metaPorChave[tr.dataset.insumo];
+    const get = f => {
+      const inp = tr.querySelector(`input[data-f="${f}"]`);
+      const v = parseFloat(inp.value);
+      return isNaN(v) ? 0 : v;
+    };
+    const medido = get('consumo_informado');
+    let consumo = medido > 0 ? medido
+                : Math.max(0, get('estoque_inicial') + get('entradas_nfe') - get('estoque_final'));
+    tr.querySelector('.prev-consumo').textContent = fmt(consumo, 2);
+    tr.querySelector('.prev-emissao').textContent = fmt(consumo * meta.fator, 4);
+  });
+}
+
+/* ---------- Calcular (backend) ---------- */
+function mrvMontarPayload(){
+  return {
+    empresa: document.getElementById('mrv-empresa').value.trim() || 'Empresa',
+    cnpj_cpf: document.getElementById('mrv-cnpj').value.trim(),
+    setor: document.getElementById('mrv-setor').value,
+    ano: parseInt(document.getElementById('mrv-ano').value) || 2027,
+    mes: parseInt(document.getElementById('mrv-mes').value) || 1,
+    tolerancia_pct: parseFloat(document.getElementById('mrv-tolerancia').value) || 2,
+    itens: mrvLerItens(),
+  };
+}
+
+async function mrvCalcular(){
+  const payload = mrvMontarPayload();
+  mrvMsg('Calculando fechamento no backend…', 'ok');
+  try{
+    const r = await api('/api/v1/mrv/mrvCalcular', { method: 'POST', body: JSON.stringify(payload) });
+    MRV_ULTIMO = { payload, resultado: r };
+    mrvRenderResultado(r);
+    mrvMsg('Fechamento calculado. Revise a conciliação e clique em "Gravar fechamento do mês".', 'ok');
+    document.getElementById('mrv-btn-salvar').style.display = 'inline-block';
+  } catch(e){ mrvMsg('Erro no cálculo: ' + e.message, 'err'); }
+}
+
+function mrvRenderResultado(r){
+  document.getElementById('mrv-r-e1').textContent = fmt(r.total_e1, 4);
+  document.getElementById('mrv-r-e2').textContent = fmt(r.total_e2, 4);
+  document.getElementById('mrv-r-total').textContent = fmt(r.total_tco2e, 4);
+  document.getElementById('mrv-r-bio').textContent = fmt(r.total_biogenico_qtd, 2);
+  document.getElementById('mrv-r-conc').innerHTML = mrvBadgeConc(r.status_conciliacao)
+    + (r.divergencia_max_pct != null ? `<div class="muted" style="color:var(--lime);font-size:.68rem;margin-top:3px;">Δ máx ${fmt(r.divergencia_max_pct,2)}%</div>` : '');
+  document.getElementById('mrv-r-hash').textContent = r.hash_auditoria || '—';
+
+  document.getElementById('mrv-r-detalhes').innerHTML = (r.itens || []).map(i => {
+    const div = i.divergencia_pct != null ? `${i.divergencia_pct >= 0 ? '+' : ''}${fmt(i.divergencia_pct,2)}%` : '—';
+    const avisos = (i.avisos && i.avisos.length)
+      ? `<div class="avisos">⚠ ${i.avisos.join(' · ')}</div>` : '';
+    const origem = i.origem_consumo === 'medicao_direta' ? '<span class="tag-dir">medido</span>' : '';
+    return `<tr>
+      <td><b>${i.rotulo}</b> ${origem}${avisos}</td>
+      <td class="muted">${i.tipo_emissao}</td>
+      <td class="num">${fmt(i.consumo_apurado, 2)} ${i.unidade}</td>
+      <td class="num">${i.fator}</td>
+      <td class="num"><b>${fmt(i.emissao_tco2e, 4)}</b></td>
+      <td class="num">${div}</td>
+      <td>${i.escopo === 'biogenico' ? '<span class="mrv-badge b-bio">ISENTO SBCE</span>' : mrvBadgeConc(i.status_conciliacao)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('mrv-result-card').style.display = 'block';
+}
+
+/* ---------- Gravar fechamento ---------- */
+async function mrvSalvar(){
+  if (!MRV_ULTIMO){ mrvMsg('Calcule primeiro.', 'err'); return; }
+  mrvMsg('Gravando fechamento…', 'ok');
+  try{
+    const r = await api('/api/v1/mrv/fechamentos', {
+      method: 'POST', body: JSON.stringify(MRV_ULTIMO.payload),
+    });
+    mrvMsg(`Fechamento gravado · ID ${r.id} · ${r.status_conciliacao}` +
+            (r.divergencia_max_pct != null ? ` · Δ máx ${fmt(r.divergencia_max_pct,2)}%` : ''), 'ok');
+    await mrvCarregarFechamentos();
+  } catch(e){ mrvMsg('Erro ao gravar: ' + e.message, 'err'); }
+}
+
+/* ---------- Lista de fechamentos + grade de meses ---------- */
+const MRV_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+async function mrvCarregarFechamentos(){
+  const ano = parseInt(document.getElementById('mrv-ano').value) || 2027;
+  document.getElementById('mrv-lbl-ano-lista').textContent = ano;
+  const tbody = document.getElementById('mrv-tbl-fechamentos');
+  try{
+    const data = await api(`/api/v1/mrv/fechamentos?ano=${ano}&limit=200`);
+    const lista = data?.dados || [];
+
+    // Grade de meses (do setor selecionado)
+    const setor = document.getElementById('mrv-setor').value;
+    const porMes = {};
+    lista.filter(f => f.setor === setor).forEach(f => { porMes[f.mes] = f; });
+    document.getElementById('mrv-mes-grid').innerHTML = MRV_MESES.map((m, idx) => {
+      const f = porMes[idx + 1];
+      return `<div class="mes-cell ${f ? 'done' : ''}">${m}${f ? `<span class="v">${fmt(f.total_tco2e, 0)}</span>` : ''}</div>`;
+    }).join('');
+
+    if (!lista.length){
+      tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:1rem;">Nenhum fechamento gravado para este ano.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(f => `
+      <tr>
+        <td><b>${String(f.mes).padStart(2,'0')}/${f.ano}</b></td>
+        <td>${f.empresa || '—'}<br><span class="muted">${f.cnpj_cpf || ''}</span></td>
+        <td>${f.layout}</td>
+        <td class="num">${fmt(f.total_e1, 2)}</td>
+        <td class="num">${fmt(f.total_e2, 2)}</td>
+        <td class="num"><b>${fmt(f.total_tco2e, 2)}</b></td>
+        <td>${mrvBadgeConc(f.status_conciliacao)}</td>
+        <td><button class="btn-sec" style="padding:.25rem .55rem;font-size:.72rem;" onclick="mrvRemover(${f.id})">remover</button></td>
+      </tr>`).join('');
+  } catch(e){
+    tbody.innerHTML = `<tr><td colspan="8" class="muted" style="color:#b91c1c;text-align:center;padding:1rem;">Erro: ${e.message}</td></tr>`;
+  }
+}
+
+async function mrvRemover(id){
+  if (!confirm('Remover este fechamento mensal?')) return;
+  try{
+    await api(`/api/v1/mrv/fechamentos/${id}`, { method: 'DELETE' });
+    await mrvCarregarFechamentos();
+  } catch(e){ mrvMsg('Erro ao remover: ' + e.message, 'err'); }
+}
+
+/* ---------- Consolidado anual → inventário ---------- */
+async function mrvConsolidar(){
+  const ano = parseInt(document.getElementById('mrv-ano').value) || 2027;
+  const cnpj = document.getElementById('mrv-cnpj').value.trim();
+  try{
+    const qs = cnpj ? `?cnpj_cpf=${encodeURIComponent(cnpj)}` : '';
+    MRV_CONSOLIDADO = await api(`/api/v1/mrv/consolidado/${ano}${qs}`);
+    document.getElementById('mrv-c-total').textContent = fmt(MRV_CONSOLIDADO.total_tco2e, 4);
+    document.getElementById('mrv-c-status').innerHTML = mrvBadgeStatusSBCE(MRV_CONSOLIDADO.status_projetado);
+    document.getElementById('mrv-c-meses').textContent = `${MRV_CONSOLIDADO.meses_presentes.length}/12`;
+    document.getElementById('mrv-c-div').textContent = MRV_CONSOLIDADO.fechamentos_divergentes;
+    const falt = document.getElementById('mrv-c-faltantes');
+    if (MRV_CONSOLIDADO.meses_faltantes.length){
+      falt.style.display = 'block';
+      falt.textContent = 'Meses sem fechamento: ' +
+        MRV_CONSOLIDADO.meses_faltantes.map(m => MRV_MESES[m-1]).join(', ') +
+        '. O inventário anual gerado refletirá apenas os meses fechados.';
+    } else {
+      falt.style.display = 'none';
+    }
+    document.getElementById('mrv-consolidado-card').style.display = 'block';
+  } catch(e){ mrvMsg('Erro ao consolidar: ' + e.message, 'err'); }
+}
+
+async function mrvGerarInventario(){
+  if (!MRV_CONSOLIDADO){ mrvMsg('Consolide o ano primeiro.', 'err'); return; }
+  const payload = {
+    empresa: document.getElementById('mrv-empresa').value.trim() || 'Empresa',
+    cnpj_cpf: document.getElementById('mrv-cnpj').value.trim(),
+    ano_referencia: MRV_CONSOLIDADO.ano,
+    ...MRV_CONSOLIDADO.campos_emissao,
+    cbe_disponiveis: 0,
+    crve_disponiveis: 0,
+  };
+  if (!confirm(`Gerar inventário anual ${MRV_CONSOLIDADO.ano} com ${fmt(MRV_CONSOLIDADO.total_tco2e,2)} tCO₂e (consolidado de ${MRV_CONSOLIDADO.meses_presentes.length} meses)?`)) return;
+  try{
+    const r = await api('/api/v1/emissoes/', { method: 'POST', body: JSON.stringify(payload) });
+    mrvMsg(`Inventário anual registrado · ID ${r.id} · ${r.status_conformidade}. Edite CBE/CRVE no Inventário GEE do painel principal.`, 'ok');
+  } catch(e){ mrvMsg('Erro ao registrar inventário: ' + e.message, 'err'); }
+}
 </script>
 </body>
 </html>
