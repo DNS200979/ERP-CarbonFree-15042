@@ -36,16 +36,18 @@ router = APIRouter()
 TIPOS_ALVO_VALIDOS = {"historico", "fechamento"}
 
 # Assinaturas de bytes (magic numbers) para checagem cruzada com o Content-Type
-# declarado pelo cliente — não confiar cegamente no header. Mimes sem
-# assinatura fixa (xml/txt/xls legado) passam sem essa checagem adicional.
-_MAGIC_BYTES: dict[bytes, set[str]] = {
-    b"%PDF-": {"application/pdf"},
-    b"\x89PNG\r\n\x1a\n": {"image/png"},
-    b"\xff\xd8\xff": {"image/jpeg"},
-    b"PK\x03\x04": {
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    },
+# declarado pelo cliente — não confiar cegamente no header. Para os mimes que
+# têm assinatura conhecida, o conteúdo DEVE começar por uma delas; senão o
+# upload é rejeitado (evita subir um executável dizendo que é PDF). Mimes sem
+# assinatura fixa (xml/txt) passam sem essa checagem adicional.
+_ASSINATURAS_POR_MIME: dict[str, list[bytes]] = {
+    "application/pdf": [b"%PDF-"],
+    "image/png": [b"\x89PNG\r\n\x1a\n"],
+    "image/jpeg": [b"\xff\xd8\xff"],
+    "image/webp": [b"RIFF"],  # contêiner RIFF (marca WEBP no offset 8)
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [b"PK\x03\x04"],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [b"PK\x03\x04"],
+    "application/vnd.ms-excel": [b"\xd0\xcf\x11\xe0", b"PK\x03\x04"],  # OLE antigo ou xlsx renomeado
 }
 
 
@@ -58,12 +60,14 @@ def _sanitizar_nome(nome: str) -> str:
 
 
 def _checar_magic_bytes(conteudo: bytes, mime: str) -> None:
-    for assinatura, mimes_ok in _MAGIC_BYTES.items():
-        if conteudo.startswith(assinatura) and mime not in mimes_ok:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                f"Conteúdo do arquivo não corresponde ao tipo declarado ({mime}).",
-            )
+    esperadas = _ASSINATURAS_POR_MIME.get(mime)
+    if not esperadas:
+        return  # tipo sem assinatura confiável (xml/txt) — não há o que checar
+    if not any(conteudo.startswith(sig) for sig in esperadas):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"Conteúdo do arquivo não corresponde ao tipo declarado ({mime}).",
+        )
 
 
 def _buscar_alvo(tipo_alvo: str, alvo_id: int, usuario_id: str) -> dict:
