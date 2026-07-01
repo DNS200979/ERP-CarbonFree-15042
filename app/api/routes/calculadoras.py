@@ -95,8 +95,12 @@ class TransporteEntrada(BaseModel):
 # ── Helper: salvar no histórico ──────────────────────────────────────────────
 
 def _salvar_historico(usuario: dict, tipo: str, escopo: int,
-                      entrada: dict, resultado, dados_extra: dict | None = None):
-    """Persiste o cálculo no Supabase. Falha silenciosa para não bloquear o cálculo."""
+                      entrada: dict, resultado, dados_extra: dict | None = None) -> Optional[int]:
+    """Persiste o cálculo no Supabase. Falha silenciosa para não bloquear o cálculo.
+
+    Retorna o id da linha gravada (ou None se falhar), para permitir anexar
+    evidências ao cálculo logo em seguida.
+    """
     try:
         payload = {
             "usuario_id": usuario["id"],
@@ -111,9 +115,11 @@ def _salvar_historico(usuario: dict, tipo: str, escopo: int,
         }
         if dados_extra:
             payload.update(dados_extra)
-        get_db_client().table("historico_calculos").insert(payload).execute()
+        resp = get_db_client().table("historico_calculos").insert(payload).execute()
+        return resp.data[0]["id"] if resp.data else None
     except Exception as e:
         print(f"[historico] Falha ao salvar: {e}")
+        return None
 
 
 def _serializar(resultado, tipo: str, escopo: int) -> dict:
@@ -157,13 +163,16 @@ def calc_combustivel(dados: CombustivelEntrada, usuario: dict = Depends(usuario_
 
     r = calcular_combustivel(dados.combustivel, dados.quantidade, dados.escopo,
                              dados.categoria, dados.gwp_set)
+    historico_id = None
     if dados.salvar:
-        _salvar_historico(usuario, "combustivel", dados.escopo,
+        historico_id = _salvar_historico(usuario, "combustivel", dados.escopo,
                           {"combustivel": dados.combustivel, "quantidade": dados.quantidade,
                            "categoria": dados.categoria, "gwp_set": dados.gwp_set}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
-    return _serializar(r, "combustivel", dados.escopo)
+    out = _serializar(r, "combustivel", dados.escopo)
+    out["historico_id"] = historico_id
+    return out
 
 
 @router.post("/eletricidade", status_code=status.HTTP_200_OK,
@@ -173,13 +182,16 @@ def calc_eletricidade(dados: EletricidadeEntrada, usuario: dict = Depends(usuari
     padrão. Aceita fator manual/market-based (contrato, I-REC)."""
     r = calcular_eletricidade(dados.kwh, ano=dados.ano,
                               fator_customizado=dados.fator_customizado, base=dados.base)
+    historico_id = None
     if dados.salvar:
-        _salvar_historico(usuario, "eletricidade", 2,
+        historico_id = _salvar_historico(usuario, "eletricidade", 2,
                           {"kwh": dados.kwh, "ano": dados.ano, "base": dados.base,
                            "fator_customizado": dados.fator_customizado}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
-    return _serializar(r, "eletricidade", 2)
+    out = _serializar(r, "eletricidade", 2)
+    out["historico_id"] = historico_id
+    return out
 
 
 @router.post("/refrigerante", status_code=status.HTTP_200_OK,
@@ -187,12 +199,15 @@ def calc_eletricidade(dados: EletricidadeEntrada, usuario: dict = Depends(usuari
 def calc_refrigerante(dados: RefrigeranteEntrada, usuario: dict = Depends(usuario_autenticado)):
     """Escopo 1 fugitivo — vazamento de gases HFC com GWP 100 anos."""
     r = calcular_refrigerante(dados.refrigerante, dados.kg_vazados)
+    historico_id = None
     if dados.salvar:
-        _salvar_historico(usuario, "refrigerante", 1,
+        historico_id = _salvar_historico(usuario, "refrigerante", 1,
                           {"refrigerante": dados.refrigerante, "kg_vazados": dados.kg_vazados}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
-    return _serializar(r, "refrigerante", 1)
+    out = _serializar(r, "refrigerante", 1)
+    out["historico_id"] = historico_id
+    return out
 
 
 @router.post("/cadeia", status_code=status.HTTP_200_OK,
@@ -200,12 +215,15 @@ def calc_refrigerante(dados: RefrigeranteEntrada, usuario: dict = Depends(usuari
 def calc_cadeia(dados: CadeiaEntrada, usuario: dict = Depends(usuario_autenticado)):
     """Escopo 3 — estimativa EEIO (spend-based) por valor de compras. TRIAGEM."""
     r = calcular_cadeia_fornecimento(dados.setor, dados.valor_reais)
+    historico_id = None
     if dados.salvar:
-        _salvar_historico(usuario, "cadeia", 3,
+        historico_id = _salvar_historico(usuario, "cadeia", 3,
                           {"setor": dados.setor, "valor_reais": dados.valor_reais}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
-    return _serializar(r, "cadeia", 3)
+    out = _serializar(r, "cadeia", 3)
+    out["historico_id"] = historico_id
+    return out
 
 
 @router.post("/transporte", status_code=status.HTTP_200_OK,
@@ -213,12 +231,15 @@ def calc_cadeia(dados: CadeiaEntrada, usuario: dict = Depends(usuario_autenticad
 def calc_transporte(dados: TransporteEntrada, usuario: dict = Depends(usuario_autenticado)):
     """Escopo 3 — fator tCO₂e/t·km (toneladas × km) por tipo de veículo."""
     r = calcular_transporte_rodoviario(dados.km, dados.veiculo, dados.toneladas)
+    historico_id = None
     if dados.salvar:
-        _salvar_historico(usuario, "transporte", 3,
+        historico_id = _salvar_historico(usuario, "transporte", 3,
                           {"km": dados.km, "toneladas": dados.toneladas, "veiculo": dados.veiculo}, r,
                           {"aplicado_em_emissao_id": dados.aplicado_em_emissao_id,
                            "campo_destino": dados.campo_destino})
-    return _serializar(r, "transporte", 3)
+    out = _serializar(r, "transporte", 3)
+    out["historico_id"] = historico_id
+    return out
 
 
 # ── Endpoints auxiliares ────────────────────────────────────────────────────

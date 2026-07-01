@@ -40,3 +40,13 @@ def get_db_client() -> Client:
     """
     admin = get_admin_client()
     return admin if admin else get_client()
+
+
+def get_storage_client() -> Client:
+    """
+    Cliente para o Supabase Storage (upload/URL assinada/remoção de evidências).
+    Sempre a service key: todo acesso ao bucket privado é proxied pelo backend,
+    nunca direto do browser (ver app/api/routes/documentos.py). Uso:
+    `get_storage_client().storage.from_(bucket).upload(...)`.
+    """
+    return get_db_client()

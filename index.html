@@ -1138,10 +1138,10 @@
               <table class="data-table">
                 <thead><tr>
                   <th>Data</th><th>Tipo</th><th>Escopo</th><th>Entrada</th>
-                  <th class="text-right">tCO₂e</th><th>Aplicado em</th><th></th>
+                  <th class="text-right">tCO₂e</th><th>Aplicado em</th><th>Evidências</th><th></th>
                 </tr></thead>
                 <tbody id="tbl-historico">
-                  <tr><td colspan="7" class="empty-state">Carregando histórico…</td></tr>
+                  <tr><td colspan="8" class="empty-state">Carregando histórico…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1212,6 +1212,7 @@
           <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
             <button class="mrv-btn-primary" onclick="mrvCalcular()">Calcular fechamento</button>
             <button class="mrv-btn-accent" id="mrv-btn-salvar" onclick="mrvSalvar()" style="display:none;">Gravar fechamento do mês</button>
+            <button class="btn-sec" id="mrv-btn-anexar" onclick="abrirDocumentos('fechamento', MRV_ULTIMO && MRV_ULTIMO.fechamentoId)" style="display:none;">Anexar evidências</button>
           </div>
           <div id="mrv-msg" class="mrv-msg"></div>
         </div>
@@ -1253,10 +1254,10 @@
               <thead><tr>
                 <th>Competência</th><th>Empresa</th><th>Setor</th>
                 <th class="num">E1</th><th class="num">E2</th><th class="num">Total tCO₂e</th>
-                <th>Conciliação</th><th></th>
+                <th>Conciliação</th><th>Evidências</th><th></th>
               </tr></thead>
               <tbody id="mrv-tbl-fechamentos">
-                <tr><td colspan="8" class="muted" style="text-align:center;padding:1rem;">Nenhum fechamento carregado ainda.</td></tr>
+                <tr><td colspan="9" class="muted" style="text-align:center;padding:1rem;">Nenhum fechamento carregado ainda.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1739,6 +1740,45 @@ curl -X POST <span id="sample-base">http://localhost:8000</span>/api/v1/emissoes
       <p class="text-[11px] text-stone-400 mt-3">
         Empresas do Simples (sem ECF) preenchem o inventário manualmente.
         Método spend-based é de triagem: refine Escopos 1 e 2 com dado físico acima de 25.000 tCO₂e/ano.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL DE EVIDÊNCIAS/DOCUMENTOS ===================== -->
+<div id="doc-modal" class="hidden">
+  <div class="calc-modal-card">
+    <div class="calc-modal-header">
+      <div>
+        <div class="text-mbv-green text-[10px] uppercase tracking-widest font-bold">Rastreabilidade</div>
+        <div class="font-display text-lg">Evidências / documentos</div>
+      </div>
+      <button onclick="fecharDocumentos()" class="text-mbv-lime hover:text-white"><i data-lucide="x"></i></button>
+    </div>
+    <div class="calc-modal-body">
+      <p class="text-xs text-stone-500 mb-3">
+        Anexe NF-e, laudos, faturas, MTR ou certificados de calibração como evidência deste
+        cálculo/fechamento — ficam disponíveis para o organismo verificador (OVV).
+      </p>
+      <div id="doc-insumo-wrap" class="hidden mb-3">
+        <label class="field-label">Insumo (opcional)</label>
+        <select id="doc-insumo-select" class="field-input"><option value="">Fechamento inteiro</option></select>
+      </div>
+      <div class="flex gap-2 items-center flex-wrap">
+        <input type="file" id="doc-file-input" class="field-input" style="flex:1 1 220px; padding:.4rem;" />
+        <button id="btn-doc-upload" onclick="enviarDocumento()" class="btn-primary text-sm">
+          <i data-lucide="upload" class="w-4 h-4"></i> Enviar
+        </button>
+      </div>
+      <input id="doc-descricao" class="field-input mt-2" placeholder="Descrição (opcional) — ex.: NF-e do lote de junho" />
+
+      <div id="doc-lista" class="mt-4 space-y-2 text-sm"></div>
+
+      <div class="flex gap-2 mt-4">
+        <button onclick="fecharDocumentos()" class="btn-secondary flex-1 justify-center text-sm">Fechar</button>
+      </div>
+      <p class="text-[11px] text-stone-400 mt-3">
+        PDF, imagem, DOCX/XLSX ou XML, até 10 MB por arquivo.
       </p>
     </div>
   </div>
@@ -2831,6 +2871,20 @@ async function executarCalc(tipo) {
     const btnMem = document.getElementById(`calc-${suf}-mem`);
     if (btnMem) btnMem.disabled = false;
 
+    // Anexar evidência — só disponível depois que o cálculo foi salvo (tem id)
+    let elAnexo = document.getElementById(`calc-${suf}-anexo`);
+    if (!elAnexo) {
+      elAnexo = document.createElement('div');
+      elAnexo.id = `calc-${suf}-anexo`;
+      elAnexo.className = 'text-xs mt-1';
+      document.getElementById(`calc-${suf}-gases`).insertAdjacentElement('afterend', elAnexo);
+    }
+    elAnexo.innerHTML = data.historico_id
+      ? `<button onclick="abrirDocumentos('historico', ${data.historico_id})" class="text-mbv-green hover:text-mbv-dark inline-flex items-center gap-1">
+          <i data-lucide="paperclip" class="w-3 h-3"></i> Anexar evidência</button>`
+      : '';
+    if (data.historico_id && typeof lucide !== 'undefined') lucide.createIcons();
+
     let msg = `${tipo}: ${fmt(data.tco2e, 4)} tCO₂e`;
     if (data.co2_biogenico_t > 0) msg += ` (+ ${fmt(data.co2_biogenico_t, 4)} t CO₂ biogênico à parte)`;
     if (payload.salvar) msg += ' · salvo no histórico';
@@ -2975,12 +3029,12 @@ function trocarAbaCalc(aba) {
 
 async function carregarHistorico() {
   const tbody = document.getElementById('tbl-historico');
-  tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Carregando…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Carregando…</td></tr>';
   try {
     const data = await api('/api/v1/calculadoras/historico?limit=100');
     const lista = data?.dados || [];
     if (!lista.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum cálculo salvo ainda. Marque "Salvar no histórico" ao calcular.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum cálculo salvo ainda. Marque "Salvar no histórico" ao calcular.</td></tr>';
       return;
     }
     tbody.innerHTML = lista.map(c => {
@@ -2997,13 +3051,15 @@ async function carregarHistorico() {
           <td class="text-xs text-stone-600">${entrada}</td>
           <td class="text-right font-mono text-mbv-dark font-semibold">${fmt(c.tco2e, 6)}</td>
           <td>${aplicado}</td>
+          <td><button onclick="abrirDocumentos('historico', ${c.id})" class="text-mbv-green hover:text-mbv-dark text-xs" title="Anexar/ver evidências">
+            <i data-lucide="paperclip" class="w-4 h-4"></i></button></td>
           <td><button onclick="removerHistorico(${c.id})" class="text-red-500 hover:text-red-700 text-xs">
             <i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
         </tr>`;
     }).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state text-red-700">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state text-red-700">Erro: ${e.message}</td></tr>`;
   }
 }
 
@@ -3216,6 +3272,141 @@ async function lerECFInventario() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = txtOrig;
+  }
+}
+
+/* ---------- Evidências / documentos anexados ---------- */
+const DOC_STATE = { tipoAlvo: null, alvoId: null };
+
+function abrirDocumentos(tipoAlvo, alvoId) {
+  if (!state.token) { abrirModalLogin(); return; }
+  if (!alvoId) { toast('Salve o cálculo/fechamento antes de anexar evidências.', 'warn'); return; }
+  DOC_STATE.tipoAlvo = tipoAlvo;
+  DOC_STATE.alvoId = alvoId;
+
+  const insumoWrap = document.getElementById('doc-insumo-wrap');
+  const insumoSelect = document.getElementById('doc-insumo-select');
+  const itensDisponiveis = (tipoAlvo === 'fechamento' && MRV_ULTIMO && MRV_ULTIMO.fechamentoId === alvoId
+    && MRV_ULTIMO.resultado && MRV_ULTIMO.resultado.itens) ? MRV_ULTIMO.resultado.itens : null;
+  if (itensDisponiveis) {
+    insumoSelect.innerHTML = '<option value="">Fechamento inteiro</option>' +
+      itensDisponiveis.map(i => `<option value="${i.insumo}">${i.rotulo}</option>`).join('');
+    insumoWrap.classList.remove('hidden');
+  } else {
+    insumoSelect.innerHTML = '<option value="">Fechamento inteiro</option>';
+    insumoWrap.classList.toggle('hidden', tipoAlvo !== 'fechamento');
+  }
+
+  document.getElementById('doc-file-input').value = '';
+  document.getElementById('doc-descricao').value = '';
+  document.getElementById('doc-modal').classList.remove('hidden');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+  carregarDocumentos();
+}
+
+function fecharDocumentos() {
+  document.getElementById('doc-modal').classList.add('hidden');
+}
+
+async function enviarDocumento() {
+  const input = document.getElementById('doc-file-input');
+  const file = input.files && input.files[0];
+  if (!file) { toast('Selecione um arquivo.', 'warn'); return; }
+  if (!state.apiUrl) { toast('Configure a URL da API.', 'error'); return; }
+
+  const btn = document.getElementById('btn-doc-upload');
+  btn.disabled = true;
+  const txtOrig = btn.innerHTML;
+  btn.innerHTML = 'Enviando…';
+
+  try {
+    const fd = new FormData();
+    fd.append('arquivo', file);
+    fd.append('tipo_alvo', DOC_STATE.tipoAlvo);
+    fd.append('alvo_id', DOC_STATE.alvoId);
+    const insumo = gv('doc-insumo-select');
+    if (insumo) fd.append('insumo_chave', insumo);
+    const desc = gv('doc-descricao');
+    if (desc) fd.append('descricao', desc);
+
+    const resp = await fetch(`${state.apiUrl}/api/v1/documentos/upload`, {
+      method: 'POST',
+      headers: state.token ? { 'Authorization': `Bearer ${state.token}` } : {},
+      body: fd,
+    });
+    if (resp.status === 401) {
+      toast('Sessão expirada. Faça login novamente.', 'warn');
+      state.token = ''; state.user = null; saveConfig(); atualizarUIUsuario(); abrirModalLogin();
+      return;
+    }
+    if (!resp.ok) {
+      let d = ''; try { d = (await resp.json()).detail || ''; } catch (e) {}
+      throw new Error(`${resp.status}${d ? ' — ' + d : ''}`);
+    }
+    toast('Documento anexado.', 'success');
+    input.value = '';
+    document.getElementById('doc-descricao').value = '';
+    await carregarDocumentos();
+  } catch (e) {
+    toast('Erro ao enviar: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = txtOrig;
+  }
+}
+
+async function carregarDocumentos() {
+  const el = document.getElementById('doc-lista');
+  el.innerHTML = '<div class="text-xs text-stone-400">Carregando…</div>';
+  try {
+    let path = `/api/v1/documentos?tipo_alvo=${DOC_STATE.tipoAlvo}&alvo_id=${DOC_STATE.alvoId}`;
+    const insumo = gv('doc-insumo-select');
+    if (insumo) path += `&insumo_chave=${encodeURIComponent(insumo)}`;
+    const data = await api(path);
+    const lista = data?.dados || [];
+    if (!lista.length) {
+      el.innerHTML = '<div class="text-xs text-stone-400">Nenhum documento anexado ainda.</div>';
+      return;
+    }
+    el.innerHTML = lista.map(d => {
+      const dt = d.criado_em ? new Date(d.criado_em).toLocaleString('pt-BR') : '—';
+      const kb = fmt((d.tamanho_bytes || 0) / 1024, 0);
+      return `
+        <div class="flex items-center justify-between gap-2 p-2 rounded-lg border border-stone-200">
+          <div class="min-w-0">
+            <div class="font-semibold text-mbv-dark text-xs truncate">${escapeHtml(d.nome_arquivo)}</div>
+            <div class="text-[11px] text-stone-400">${dt} · ${kb} KB${d.descricao ? ' · ' + escapeHtml(d.descricao) : ''}</div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="abrirUrlDocumento(${d.id})" class="text-mbv-green hover:text-mbv-dark text-xs" title="Baixar">
+              <i data-lucide="download" class="w-4 h-4"></i></button>
+            <button onclick="removerDocumento(${d.id})" class="text-red-500 hover:text-red-700 text-xs" title="Remover">
+              <i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>`;
+    }).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  } catch (e) {
+    el.innerHTML = `<div class="text-xs text-red-600">Erro: ${e.message}</div>`;
+  }
+}
+
+async function abrirUrlDocumento(docId) {
+  try {
+    const { url } = await api(`/api/v1/documentos/${docId}/url`);
+    window.open(url, '_blank');
+  } catch (e) {
+    toast('Erro ao gerar link: ' + e.message, 'error');
+  }
+}
+
+async function removerDocumento(docId) {
+  if (!confirm('Remover este documento?')) return;
+  try {
+    await api(`/api/v1/documentos/${docId}`, { method: 'DELETE' });
+    await carregarDocumentos();
+  } catch (e) {
+    toast('Erro ao remover: ' + e.message, 'error');
   }
 }
 
@@ -3488,6 +3679,7 @@ function mrvRenderInsumos(){
   mrvPreview();
   document.getElementById('mrv-result-card').style.display = 'none';
   document.getElementById('mrv-btn-salvar').style.display = 'none';
+  document.getElementById('mrv-btn-anexar').style.display = 'none';
   MRV_ULTIMO = null;
 }
 
@@ -3542,7 +3734,7 @@ async function mrvCalcular(){
   const payload = mrvMontarPayload();
   mrvMsg('Calculando fechamento no backend…', 'ok');
   try{
-    const r = await api('/api/v1/mrv/mrvCalcular', { method: 'POST', body: JSON.stringify(payload) });
+    const r = await api('/api/v1/mrv/calcular', { method: 'POST', body: JSON.stringify(payload) });
     MRV_ULTIMO = { payload, resultado: r };
     mrvRenderResultado(r);
     mrvMsg('Fechamento calculado. Revise a conciliação e clique em "Gravar fechamento do mês".', 'ok');
@@ -3587,6 +3779,8 @@ async function mrvSalvar(){
     });
     mrvMsg(`Fechamento gravado · ID ${r.id} · ${r.status_conciliacao}` +
             (r.divergencia_max_pct != null ? ` · Δ máx ${fmt(r.divergencia_max_pct,2)}%` : ''), 'ok');
+    MRV_ULTIMO.fechamentoId = r.id;
+    document.getElementById('mrv-btn-anexar').style.display = 'inline-block';
     await mrvCarregarFechamentos();
   } catch(e){ mrvMsg('Erro ao gravar: ' + e.message, 'err'); }
 }
@@ -3612,7 +3806,7 @@ async function mrvCarregarFechamentos(){
     }).join('');
 
     if (!lista.length){
-      tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:1rem;">Nenhum fechamento gravado para este ano.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="muted" style="text-align:center;padding:1rem;">Nenhum fechamento gravado para este ano.</td></tr>';
       return;
     }
     tbody.innerHTML = lista.map(f => `
@@ -3624,10 +3818,13 @@ async function mrvCarregarFechamentos(){
         <td class="num">${fmt(f.total_e2, 2)}</td>
         <td class="num"><b>${fmt(f.total_tco2e, 2)}</b></td>
         <td>${mrvBadgeConc(f.status_conciliacao)}</td>
+        <td><button class="btn-sec" style="padding:.25rem .55rem;font-size:.72rem;" onclick="abrirDocumentos('fechamento', ${f.id})" title="Anexar/ver evidências">
+          <i data-lucide="paperclip" class="w-4 h-4"></i></button></td>
         <td><button class="btn-sec" style="padding:.25rem .55rem;font-size:.72rem;" onclick="mrvRemover(${f.id})">remover</button></td>
       </tr>`).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch(e){
-    tbody.innerHTML = `<tr><td colspan="8" class="muted" style="color:#b91c1c;text-align:center;padding:1rem;">Erro: ${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="muted" style="color:#b91c1c;text-align:center;padding:1rem;">Erro: ${e.message}</td></tr>`;
   }
 }
 

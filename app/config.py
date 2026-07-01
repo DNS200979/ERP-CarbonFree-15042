@@ -42,3 +42,22 @@ ATIVIDADES: dict[str, dict] = {
 }
 
 DIR_CERTIFICADOS = "certificados"
+
+# ─── Anexo de evidências (NF-e, laudos, faturas etc.) ───────────────────────
+# Bucket privado no Supabase Storage. Todo acesso passa pelo backend com a
+# service key — ver app/database/client.py:get_storage_client().
+SUPABASE_BUCKET_EVIDENCIAS: str = os.getenv("SUPABASE_BUCKET_EVIDENCIAS", "evidencias-compliance")
+EVIDENCIA_TAMANHO_MAX_BYTES: int = 10 * 1024 * 1024  # 10 MB
+
+EVIDENCIA_MIME_PERMITIDOS: set[str] = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",        # .xlsx
+    "application/vnd.ms-excel",  # .xls
+    "text/xml",
+    "application/xml",  # NF-e
+    "text/plain",
+}

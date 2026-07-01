@@ -22,7 +22,7 @@ if not _FASTAPI_OK:
         "ou: uv pip install fastapi uvicorn"
     )
 
-from app.api.routes import emissoes, certificados, integracao, calculadoras, mrv_mensal
+from app.api.routes import emissoes, certificados, integracao, calculadoras, mrv_mensal, documentos
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.config import SUPABASE_URL, SUPABASE_KEY
@@ -52,6 +52,7 @@ app.include_router(certificados.router,  prefix="/api/v1/certificados",  tags=["
 app.include_router(integracao.router,    prefix="/api/v1/integracao",    tags=["Integração SAP / TOTVS"])
 app.include_router(calculadoras.router,  prefix="/api/v1/calculadoras",  tags=["Calculadoras IA (atômicas)"])
 app.include_router(mrv_mensal.router,    prefix="/api/v1/mrv",           tags=["MRV Mensal (Etapa 1 SBCE)"])
+app.include_router(documentos.router,    prefix="/api/v1/documentos",    tags=["Evidências (upload de documentos)"])
 
 app.mount("/static", StaticFiles(directory="."), name="static")
 
